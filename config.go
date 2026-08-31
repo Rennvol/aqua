@@ -8,12 +8,16 @@ import (
 )
 
 type Settings struct {
-	mu             sync.RWMutex
-	OLEDLine1      string `json:"oled_line1"`      // what to show on OLED line 1
-	OLEDLine2      string `json:"oled_line2"`       // line 2
-	OLEDLine3      string `json:"oled_line3"`       // line 3
-	OLEDLine4      string `json:"oled_line4"`       // line 4
-	PollInterval   int    `json:"poll_interval"`     // seconds
+	mu           sync.RWMutex
+	OLEDLine1    string     `json:"oled_line1"`    // what to show on OLED line 1
+	OLEDLine2    string     `json:"oled_line2"`    // line 2
+	OLEDLine3    string     `json:"oled_line3"`    // line 3
+	OLEDLine4    string     `json:"oled_line4"`    // line 4
+	PollInterval int        `json:"poll_interval"` // seconds
+	CronAPIKey   string     `json:"cron_api_key"`  // cron-job.com API key (dari dashboard)
+	CronToken    string     `json:"cron_token"`    // secret token buat endpoint cron (auto-generate)
+	PublicURL    string     `json:"public_url"`    // base URL publik (opsional; default pakai r.Host)
+	Schedules    []Schedule `json:"schedules"`     // daftar jadwal relay
 }
 
 var settingsPath = "config.json"
@@ -47,6 +51,11 @@ func saveSettings(s *Settings) {
 	os.WriteFile(settingsPath, b, 0644)
 }
 
+func saveSettingsLocked() {
+	b, _ := json.MarshalIndent(settings, "", "  ")
+	os.WriteFile(settingsPath, b, 0644)
+}
+
 func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	settings.mu.RLock()
@@ -71,6 +80,7 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 		OLEDLine3    string `json:"oled_line3"`
 		OLEDLine4    string `json:"oled_line4"`
 		PollInterval int    `json:"poll_interval"`
+		CronAPIKey   string `json:"cron_api_key"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"bad json"}`, 400)
@@ -91,6 +101,9 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.PollInterval > 0 {
 		settings.PollInterval = req.PollInterval
+	}
+	if req.CronAPIKey != "" {
+		settings.CronAPIKey = req.CronAPIKey
 	}
 	settings.mu.Unlock()
 	saveSettings(settings)

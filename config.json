@@ -3,5 +3,9 @@
   "oled_line2": "voltage",
   "oled_line3": "relay",
   "oled_line4": "text",
-  "poll_interval": 3
+  "poll_interval": 3,
+  "cron_api_key": "",
+  "cron_token": "77fe83041ccf776a1907d89b59d41ade",
+  "public_url": "http://localhost:30221",
+  "schedules": []
 }

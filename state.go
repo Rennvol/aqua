@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// State is the shared sensor/relay state.
 type State struct {
 	mu          sync.RWMutex
 	Connected   bool    `json:"connected"`
@@ -18,7 +19,8 @@ type State struct {
 	Mode        string  `json:"mode"` // "mock" | "serial"
 }
 
-var state = &State{Mode: "mock"}
+// st is the shared state instance.
+var st = &State{Mode: "mock"}
 
 func (s *State) snapshot() State {
 	s.mu.RLock()

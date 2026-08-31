@@ -36,8 +36,14 @@ func main() {
 	mux.HandleFunc("/api/logs", handleLogs)
 	mux.HandleFunc("/api/settings", handleSetSettings)
 	mux.HandleFunc("/api/settings/get", handleGetSettings)
+	mux.HandleFunc("/api/schedules", handleScheduleList)
+	mux.HandleFunc("/api/schedule", handleScheduleAdd)
+	mux.HandleFunc("/api/schedule/{id}/toggle", handleScheduleToggle)
+	mux.HandleFunc("/api/schedule/{id}", handleScheduleDelete)
+	mux.HandleFunc("/api/cron/", handleCron)
 
 	go RunSerial()
+	ensureToken()
 
 	sub, err := fs.Sub(staticFiles, "static")
 	if err != nil {
@@ -92,7 +98,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func handleState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(state.snapshot())
+	json.NewEncoder(w).Encode(st.snapshot())
 }
 
 type HealthResponse struct {
@@ -121,7 +127,7 @@ func handleRelay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state.setRelay(req.Relay, req.On)
+	st.setRelay(req.Relay, req.On)
 
 	label := "lampu"
 	if req.Relay == "fan" {
@@ -159,9 +165,9 @@ func handleOLED(w http.ResponseWriter, r *http.Request) {
 		req.Text = req.Text[:128]
 	}
 
-	state.mu.Lock()
-	state.OLEDText = req.Text
-	state.mu.Unlock()
+	st.mu.Lock()
+	st.OLEDText = req.Text
+	st.mu.Unlock()
 
 	addLog(realIP(r), fmt.Sprintf("oled: %s", req.Text))
 

@@ -9,10 +9,10 @@ import (
 // RunMock simulates sensor data when no UNO is connected.
 // Temperatures drifts around 28°C, voltage ~12V, current varies.
 func RunMock() {
-	state.mu.Lock()
-	state.Mode = "mock"
-	state.Connected = false
-	state.mu.Unlock()
+	st.mu.Lock()
+	st.Mode = "mock"
+	st.Connected = false
+	st.mu.Unlock()
 
 	t := 28.0
 	v := 12.0
@@ -37,13 +37,13 @@ func RunMock() {
 		}
 		i = base + 0.2*math.Sin(step*0.2)
 
-		state.setSensor(t, v, math.Abs(i))
+		st.setSensor(t, v, math.Abs(i))
 
 		// read relay state from the shared state
-		state.mu.RLock()
-		lampOn = state.RelayLamp
-		fanOn = state.RelayFan
-		state.mu.RUnlock()
+		st.mu.RLock()
+		lampOn = st.RelayLamp
+		fanOn = st.RelayFan
+		st.mu.RUnlock()
 
 		time.Sleep(2 * time.Second)
 	}
@@ -52,9 +52,9 @@ func RunMock() {
 // RunSerial reads from serial port.
 // For now, just a stub — will be implemented when hardware arrives.
 func RunSerial() {
-	state.mu.Lock()
-	state.Mode = "serial"
-	state.mu.Unlock()
+	st.mu.Lock()
+	st.Mode = "serial"
+	st.mu.Unlock()
 
 	log.Println("serial: waiting for /dev/ttyACM0...")
 	// TODO: open /dev/ttyACM0 (or /dev/ttyUSB0), read JSON lines, parse into state

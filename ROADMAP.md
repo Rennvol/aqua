@@ -25,11 +25,12 @@ Deploy: Oracle = dev only (port 30221) → push GitHub → user git pull di STB 
 - Log: akses web (IP/sumber/waktu) + aksi (tombol, relay, oled, error) → ring buffer file
 - **Selesai kalau:** toggle relay + kirim OLED dari browser, log tercatat, config tersimpan
 
-## Fase 3 — Jadwal via cron-job.com
-- Endpoint GET `/api/relay/{lamp,fan}/on|off` buat cron eksternal
-- Halaman Jadwal: generate URL + contoh konfigurasi cron-job.com
+## Fase 3 — Jadwal via cron-job.com ✅
+- Endpoint GET `/api/cron/{token}/relay/{lamp,fan}/on|off` buat cron eksternal (token rahasia auto-generate)
+- Halaman Jadwal: tambah/aktif/nonaktif/hapus jadwal langsung dari web (via cron-job.org REST API, API key di Settings)
 - Semua hit cron tercatat di log sebagai aksi "auto"
-- **Selesai kalau:** curl `.../api/relay/lamp/on` eksekusi + muncul di log; halaman jadwal tampil
+- Rollback: jadwal yang gagal dibuat di cron-job.org gak disimpan
+- **Selesai kalau:** tambah jadwal → job kepush ke cron-job.org; curl endpoint cron eksekusi + muncul di log; hapus → job kehapus remote
 
 ## Fase 4 — Polish
 - Mobile polish (tombol 44px+, kartu rapi), status relay konsisten, error handling serial, README deploy STB

@@ -306,6 +306,40 @@ footer {
         </label>
         <button class="btn primary" id="saveSettings" style="margin-left:auto;">Simpan</button>
       </div>
+      <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
+        <h2>Cron-job.org</h2>
+        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">
+          Ambil API key dari <a href="https://console.cron-job.org/settings" target="_blank" rel="noopener">console.cron-job.org → Settings</a>.
+          Dipakai bikin/aktifkan/hapus jadwal otomatis dari sini — gak perlu buka web cron-job.org lagi.
+        </p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="setCronKey" placeholder="API key cron-job.org" style="flex:1;">
+          <button class="btn" id="saveCronKey">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h1>Jadwal Otomatis</h1>
+    <div class="card col-12" style="grid-column:span 12;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <select id="schedRelay" class="sel" style="flex:1;min-width:90px;">
+          <option value="lamp">Lampu 💡</option>
+          <option value="fan">Kipas 🌬️</option>
+        </select>
+        <select id="schedState" class="sel" style="flex:1;min-width:90px;">
+          <option value="on">ON</option>
+          <option value="off">OFF</option>
+        </select>
+        <input type="number" id="schedHour" min="0" max="23" placeholder="Jam" style="width:80px;">
+        <span style="color:var(--muted);">:</span>
+        <input type="number" id="schedMin" min="0" max="59" placeholder="Menit" style="width:80px;">
+        <button class="btn primary" id="schedAdd" style="flex:1;min-width:100px;">+ Tambah</button>
+      </div>
+      <ul class="log-list" id="schedList" style="max-height:260px;">
+        <li style="color:var(--muted);">Belum ada jadwal.</li>
+      </ul>
     </div>
   </section>
 
@@ -476,6 +510,77 @@ async function fetchLogs() {
 }
 fetchLogs();
 setInterval(fetchLogs, 10000);
+
+/* ── cron key ── */
+$("saveCronKey").addEventListener("click", async () => {
+  const key = $("setCronKey").value.trim();
+  if (!key) { toast("Isi API key"); return; }
+  const r = await fetch("/api/settings", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({cron_api_key: key})
+  });
+  if (r.ok) toast("API key cron-job.org disimpan ✓");
+  else toast("Gagal simpan");
+});
+
+/* ── jadwal ── */
+async function loadSchedules() {
+  try {
+    const r = await fetch("/api/schedules");
+    const list = await r.json();
+    const ul = $("schedList");
+    if (!list.length) {
+      ul.innerHTML = '<li style="color:var(--muted);">Belum ada jadwal. Tambah di atas.</li>';
+      return;
+    }
+    ul.innerHTML = list.map(s => {
+      const t = s.relay === "lamp" ? "Lampu 💡" : "Kipas 🌬️";
+      const st = s.state === "on" ? "ON" : "OFF";
+      return `<li style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="flex:1;">${t} ${st} ${String(s.hour).padStart(2,"0")}:${String(s.minute).padStart(2,"0")}</span>
+        <span style="font-size:var(--text-2xs);color:var(--muted);">cron#${s.cron_job_id}</span>
+        <input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""}
+          onchange="toggleSched(${s.id}, this.checked)">
+        <button class="btn" style="padding:4px 10px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button>
+      </li>`;
+    }).join("");
+  } catch (e) { /* ignore */ }
+}
+async function toggleSched(id, on) {
+  await fetch("/api/schedule/" + id + "/toggle", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({enabled: on})
+  });
+  loadSchedules();
+}
+async function deleteSched(id) {
+  await fetch("/api/schedule/" + id, {method: "DELETE"});
+  loadSchedules();
+}
+$("schedAdd").addEventListener("click", async () => {
+  const relay = $("schedRelay").value;
+  const state = $("schedState").value;
+  const hour = parseInt($("schedHour").value) || 0;
+  const min = parseInt($("schedMin").value) || 0;
+  const r = await fetch("/api/schedule", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({relay, state, hour, minute: min})
+  });
+  const d = await r.json();
+  if (r.ok) {
+    toast("Jadwal ditambahkan ✓");
+    $("schedHour").value = "";
+    $("schedMin").value = "";
+    loadSchedules();
+  } else {
+    toast("Gagal: " + (d.error || r.status));
+  }
+});
+loadSchedules();
+setInterval(loadSchedules, 15000);
 </script>
 </body>
 </html>
