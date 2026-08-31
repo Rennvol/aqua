@@ -16,7 +16,7 @@ import (
 // Schedule is one relay on/off rule executed by cron-job.org.
 type Schedule struct {
 	ID        int    `json:"id"`
-	Relay     string `json:"relay"`     // "lamp" | "fan"
+	Relay     string `json:"relay"`     // relay id
 	State     string `json:"state"`     // "on" | "off"
 	Hour      int    `json:"hour"`      // 0-23
 	Minute    int    `json:"minute"`    // 0-59
@@ -191,8 +191,8 @@ func handleScheduleAdd(w http.ResponseWriter, r *http.Request) {
 	} else {
 		req.Enabled = *raw.Enabled
 	}
-	if req.Relay != "lamp" && req.Relay != "fan" {
-		json.NewEncoder(w).Encode(map[string]string{"error": "relay must be lamp/fan"})
+	if !relayExists(req.Relay) {
+		json.NewEncoder(w).Encode(map[string]string{"error": "relay tidak dikenal"})
 		return
 	}
 	if req.State != "on" && req.State != "off" {
@@ -355,7 +355,7 @@ func handleScheduleDelete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if req.Relay != "" {
-			if req.Relay != "lamp" && req.Relay != "fan" {
+			if !relayExists(req.Relay) {
 				settings.mu.Unlock()
 				json.NewEncoder(w).Encode(map[string]string{"error": "relay must be lamp/fan"})
 				return
@@ -434,7 +434,7 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad token", 403)
 		return
 	}
-	if relay != "lamp" && relay != "fan" {
+	if !relayExists(relay) {
 		http.Error(w, "bad relay", 400)
 		return
 	}
@@ -444,10 +444,7 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 	}
 
 	st.setRelay(relay, state == "on")
-	label := "lampu"
-	if relay == "fan" {
-		label = "kipas"
-	}
+	label := relayLabel(relay)
 	addLog(realIP(r), fmt.Sprintf("auto cron %s: %s", label, strings.ToUpper(state)))
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "relay": relay, "on": state})
 }

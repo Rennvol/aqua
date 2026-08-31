@@ -48,6 +48,11 @@ func main() {
 	mux.HandleFunc("/api/pin", authMW(handleChangePin))
 	mux.HandleFunc("/api/history", authMW(handleHistory))
 	mux.HandleFunc("/api/oled/preview", authMW(handleOLEDPreview))
+	mux.HandleFunc("/api/relays", authMW(handleRelays))
+	mux.HandleFunc("/api/relays/", authMW(handleRelays))
+	mux.HandleFunc("/api/sensors", authMW(handleSensors))
+	mux.HandleFunc("/api/sensors/", authMW(handleSensors))
+	mux.HandleFunc("/api/ingest", authMW(handleIngest))
 
 	go hostLoop()
 	go RunSerial()
@@ -117,6 +122,27 @@ type HealthResponse struct {
 
 /* ── relay ── */
 
+func relayLabel(id string) string {
+	settings.mu.RLock()
+	defer settings.mu.RUnlock()
+	for _, d := range settings.Relays {
+		if d.ID == id {
+			return d.Label
+		}
+	}
+	return id
+}
+func relayExists(id string) bool {
+	settings.mu.RLock()
+	defer settings.mu.RUnlock()
+	for _, d := range settings.Relays {
+		if d.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 func handleRelay(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
@@ -130,17 +156,14 @@ func handleRelay(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
 		return
 	}
-	if req.Relay != "lamp" && req.Relay != "fan" {
-		json.NewEncoder(w).Encode(map[string]string{"error": "relay must be 'lamp' or 'fan'"})
+	if !relayExists(req.Relay) {
+		json.NewEncoder(w).Encode(map[string]string{"error": "relay tidak dikenal"})
 		return
 	}
 
 	st.setRelay(req.Relay, req.On)
 
-	label := "lampu"
-	if req.Relay == "fan" {
-		label = "kipas"
-	}
+	label := relayLabel(req.Relay)
 	what := "ON"
 	if !req.On {
 		what = "OFF"

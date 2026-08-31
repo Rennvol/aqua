@@ -7,30 +7,55 @@ import (
 	"sync"
 )
 
+type RelayDef struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Icon  string `json:"icon"`
+}
+
+type SensorDef struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Unit  string `json:"unit"`
+	Icon  string `json:"icon"`
+}
+
 type Settings struct {
 	mu           sync.RWMutex
-	Pin          string     `json:"pin"` // 4-digit PIN login
-	OLEDLine1    string     `json:"oled_line1"`    // what to show on OLED line 1
-	OLEDLine2    string     `json:"oled_line2"`    // line 2
-	OLEDLine3    string     `json:"oled_line3"`    // line 3
-	OLEDLine4    string     `json:"oled_line4"`    // line 4
-	PollInterval int        `json:"poll_interval"` // seconds
-	CronAPIKey   string     `json:"cron_api_key"`  // cron-job.com API key (dari dashboard)
-	CronToken    string     `json:"cron_token"`    // secret token buat endpoint cron (auto-generate)
-	PublicURL    string     `json:"public_url"`    // base URL publik (opsional; default pakai r.Host)
-	Schedules    []Schedule `json:"schedules"`     // daftar jadwal relay
+	Pin          string      `json:"pin"`
+	OLEDLine1    string      `json:"oled_line1"`
+	OLEDLine2    string      `json:"oled_line2"`
+	OLEDLine3    string      `json:"oled_line3"`
+	OLEDLine4    string      `json:"oled_line4"`
+	PollInterval int         `json:"poll_interval"`
+	CronAPIKey   string      `json:"cron_api_key"`
+	CronToken    string      `json:"cron_token"`
+	PublicURL    string      `json:"public_url"`
+	Schedules    []Schedule  `json:"schedules"`
+	Relays       []RelayDef  `json:"relays"`
+	Sensors      []SensorDef `json:"sensors"`
 }
 
 var settingsPath = "config.json"
 
 func defaultSettings() *Settings {
 	return &Settings{
-		Pin:          "1234", // default PIN login, ganti di Settings
+		Pin:          "1234",
 		OLEDLine1:    "temp",
 		OLEDLine2:    "current",
 		OLEDLine3:    "voltage",
 		OLEDLine4:    "relay",
 		PollInterval: 5,
+		Relays: []RelayDef{
+			{ID: "lamp", Label: "Lampu", Icon: "💡"},
+			{ID: "fan", Label: "Kipas", Icon: "🌬️"},
+		},
+		Sensors: []SensorDef{
+			{ID: "temp", Label: "Suhu Air", Unit: "°C", Icon: "🌡️"},
+			{ID: "voltage", Label: "Tegangan", Unit: "V", Icon: "⚡"},
+			{ID: "current", Label: "Arus", Unit: "A", Icon: "🔌"},
+			{ID: "power", Label: "Daya", Unit: "W", Icon: "🔋"},
+		},
 	}
 }
 
@@ -42,7 +67,28 @@ func loadSettings() *Settings {
 	if err != nil {
 		return s
 	}
-	json.Unmarshal(data, s)
+	// merge json onto defaults (keep defaults if missing)
+	tmp := *s
+	if err := json.Unmarshal(data, &tmp); err == nil {
+		// backfill empty relays/sensors
+		if len(tmp.Relays) == 0 {
+			tmp.Relays = s.Relays
+		}
+		if len(tmp.Sensors) == 0 {
+			tmp.Sensors = s.Sensors
+		}
+		// ensure pin etc not empty
+		if tmp.Pin == "" {
+			tmp.Pin = s.Pin
+		}
+		if tmp.OLEDLine1 == "" {
+			tmp.OLEDLine1 = s.OLEDLine1
+		}
+		if tmp.PollInterval == 0 {
+			tmp.PollInterval = s.PollInterval
+		}
+		*s = tmp
+	}
 	return s
 }
 
@@ -68,6 +114,8 @@ func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		"oled_line3":    settings.OLEDLine3,
 		"oled_line4":    settings.OLEDLine4,
 		"poll_interval": settings.PollInterval,
+		"relays":        settings.Relays,
+		"sensors":       settings.Sensors,
 	})
 }
 
@@ -111,4 +159,145 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	saveSettings(settings)
 	addLog(realIP(r), "settings: update")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// relay/sensor defs CRUD
+func handleRelays(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	switch r.Method {
+	case "GET":
+		settings.mu.RLock()
+		json.NewEncoder(w).Encode(settings.Relays)
+		settings.mu.RUnlock()
+	case "POST":
+		var d RelayDef
+		if err := json.NewDecoder(r.Body).Decode(&d); err != nil || d.ID == "" {
+			http.Error(w, `{"error":"id required"}`, 400)
+			return
+		}
+		// id sanitize: lower alnum + _-
+		if d.Label == "" {
+			d.Label = d.ID
+		}
+		settings.mu.Lock()
+		for _, e := range settings.Relays {
+			if e.ID == d.ID {
+				settings.mu.Unlock()
+				http.Error(w, `{"error":"id sudah ada"}`, 400)
+				return
+			}
+		}
+		settings.Relays = append(settings.Relays, d)
+		// also init state relay false
+		st.mu.Lock()
+		if st.Relays == nil {
+			st.Relays = map[string]bool{}
+		}
+		if _, ok := st.Relays[d.ID]; !ok {
+			st.Relays[d.ID] = false
+		}
+		st.mu.Unlock()
+		settings.mu.Unlock()
+		saveSettings(settings)
+		addLog(realIP(r), "relay +"+d.ID)
+		json.NewEncoder(w).Encode(d)
+	case "DELETE":
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			// also try path /api/relays/{id}
+			id = r.PathValue("id")
+		}
+		if id == "" {
+			http.Error(w, `{"error":"id required"}`, 400)
+			return
+		}
+		settings.mu.Lock()
+		idx := -1
+		for i, e := range settings.Relays {
+			if e.ID == id {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			settings.mu.Unlock()
+			http.Error(w, `{"error":"not found"}`, 404)
+			return
+		}
+		settings.Relays = append(settings.Relays[:idx], settings.Relays[idx+1:]...)
+		settings.mu.Unlock()
+		saveSettings(settings)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	default:
+		http.Error(w, `{"error":"GET/POST/DELETE"}`, 405)
+	}
+}
+
+func handleSensors(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	switch r.Method {
+	case "GET":
+		settings.mu.RLock()
+		json.NewEncoder(w).Encode(settings.Sensors)
+		settings.mu.RUnlock()
+	case "POST":
+		var d SensorDef
+		if err := json.NewDecoder(r.Body).Decode(&d); err != nil || d.ID == "" {
+			http.Error(w, `{"error":"id required"}`, 400)
+			return
+		}
+		if d.Label == "" {
+			d.Label = d.ID
+		}
+		settings.mu.Lock()
+		for _, e := range settings.Sensors {
+			if e.ID == d.ID {
+				settings.mu.Unlock()
+				http.Error(w, `{"error":"id sudah ada"}`, 400)
+				return
+			}
+		}
+		settings.Sensors = append(settings.Sensors, d)
+		settings.mu.Unlock()
+		// init sensor value 0
+		st.mu.Lock()
+		if st.Sensors == nil {
+			st.Sensors = map[string]float64{}
+		}
+		if _, ok := st.Sensors[d.ID]; !ok {
+			st.Sensors[d.ID] = 0
+		}
+		st.mu.Unlock()
+		saveSettings(settings)
+		addLog(realIP(r), "sensor +"+d.ID)
+		json.NewEncoder(w).Encode(d)
+	case "DELETE":
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			id = r.PathValue("id")
+		}
+		if id == "" {
+			http.Error(w, `{"error":"id required"}`, 400)
+			return
+		}
+		settings.mu.Lock()
+		idx := -1
+		for i, e := range settings.Sensors {
+			if e.ID == id {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			settings.mu.Unlock()
+			http.Error(w, `{"error":"not found"}`, 404)
+			return
+		}
+		settings.Sensors = append(settings.Sensors[:idx], settings.Sensors[idx+1:]...)
+		settings.mu.Unlock()
+		saveSettings(settings)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	default:
+		http.Error(w, `{"error":"GET/POST/DELETE"}`, 405)
+	}
 }

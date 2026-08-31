@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>aqua — kontrol akuarium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
+<title>santra — pantau & kontrol</title>
 <style>
 :root{
   --paper:oklch(13% 0.010 200);--paper-2:oklch(17% 0.012 200);--paper-3:oklch(22% 0.012 200);
@@ -11,6 +12,7 @@
   --accent:oklch(72% 0.13 200);--accent-ink:oklch(15% 0.01 200);--focus:oklch(78% 0.17 200);
   --good:oklch(72% 0.15 145);--bad:oklch(68% 0.19 25);
   --font:"JetBrains Mono","Cascadia Code","Fira Code",ui-monospace,monospace;
+  --font-display:"Space Grotesk","Plus Jakarta Sans",system-ui,sans-serif;
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
   --text-2xs:0.65rem;--text-xs:0.75rem;--text-sm:0.85rem;--text-base:1rem;--text-lg:1.25rem;--text-xl:1.5rem;--text-2xl:2rem;
   --ease-out:cubic-bezier(0.22,1,0.36,1);--dur-1:120ms;--dur-2:200ms;--dur-3:320ms;--radius:10px;
@@ -29,7 +31,7 @@ a{color:var(--accent)}
 ::selection{background:var(--accent);color:var(--accent-ink)}
 .wrap{max-width:900px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-7)}
 header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) 0 var(--space-4);border-bottom:1px solid var(--rule);margin-bottom:var(--space-4)}
-.logo{font-size:var(--text-lg);font-weight:700;letter-spacing:-0.02em}.logo .dot{color:var(--accent)}
+.logo{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;letter-spacing:-0.03em}.logo .dot{color:var(--accent)}
 .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);padding:4px 10px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2)}
 .status-pill .led{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background var(--dur-2)}
 .status-pill.on .led{background:var(--good);box-shadow:0 0 6px var(--good)}.status-pill.off .led{background:var(--bad);box-shadow:0 0 6px var(--bad)}
@@ -83,15 +85,15 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
 </head>
 <body>
 <div id="loginOverlay" style="position:fixed;inset:0;background:var(--paper);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
-  <div style="font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em;">aqua.</div>
-  <div style="color:var(--muted);font-size:var(--text-xs);">Masuk pake PIN 4 angka</div>
+  <div style="font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em;">santra.</div>
+  <div style="color:var(--muted);font-size:var(--text-xs);">PIN 4 angka — santra.</div>
   <input type="password" id="loginPin" inputmode="numeric" maxlength="4" pattern="[0-9]*" placeholder="••••" style="width:120px;text-align:center;font-size:24px;letter-spacing:12px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font-family:var(--font);">
   <button class="btn primary" id="loginBtn" style="min-width:120px;">Masuk</button>
   <div id="loginErr" style="color:#e5484d;font-size:var(--text-xs);display:none;">PIN salah, coba lagi</div>
 </div>
 <div class="wrap">
   <header>
-    <div class="logo">aqua<span class="dot">.</span></div>
+    <div class="logo">santra<span class="dot">.</span></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="status-pill" id="statusPill"><span class="led"></span><span id="statusText">—</span></span>
       <button class="theme-btn" id="themeBtn" aria-label="Ganti tema">☾ / ☀</button>
@@ -108,17 +110,12 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
 
   <!-- DASHBOARD -->
   <div class="view active" id="view-dash">
-    <div class="grid">
-      <div class="card col-3"><h2>Suhu Air</h2><div class="big" id="temp">--.<span>°C</span></div><div class="meta" id="tempMeta">—</div></div>
-      <div class="card col-3"><h2>Arus</h2><div class="big" id="current">--.<span>A</span></div><div class="meta" id="currentMeta">—</div></div>
-      <div class="card col-3"><h2>Tegangan</h2><div class="big" id="voltage">--.<span>V</span></div><div class="meta" id="voltageMeta">—</div></div>
-      <div class="card col-3"><h2>Daya</h2><div class="big" id="power">--.<span>W</span></div><div class="meta">V × A · realtime</div></div>
-    </div>
+    <div class="grid" id="sensorGrid"></div>
     <div class="grid" style="margin-top:var(--space-4)">
       <div class="card col-6">
         <h2>Relay</h2>
-        <div class="toggle-row"><span class="toggle-label">Lampu 💡</span><span class="toggle-state" id="lampState">OFF</span><input type="checkbox" class="switch" id="lampSwitch" aria-label="Toggle lampu"></div>
-        <div class="toggle-row"><span class="toggle-label">Kipas 🌬️</span><span class="toggle-state" id="fanState">OFF</span><input type="checkbox" class="switch" id="fanSwitch" aria-label="Toggle kipas"></div>
+        <div id="relayList"></div>
+        <div class="meta" style="margin-top:8px;">Kelola label & tambah relay di Settings → Kelola Relay</div>
       </div>
       <div class="card col-6">
         <h2>OLED</h2>
@@ -150,7 +147,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
       <h2>Tambah Jadwal</h2>
       <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Relay
-          <select id="schedRelay" class="sel"><option value="lamp">Lampu 💡</option><option value="fan">Kipas 🌬️</option></select>
+          <select id="schedRelay" class="sel"></select>
         </label>
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Aksi
           <select id="schedState" class="sel"><option value="on">ON</option><option value="off">OFF</option></select>
@@ -214,6 +211,29 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <button class="btn" id="logoutBtn" style="margin-left:auto;">Keluar</button>
       </div>
       <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
+        <h2>Kelola Relay</h2>
+        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Tambah relay baru langsung kepakai di Dashboard & Jadwal — tanpa edit code. ID = tanpa spasi, mis: <code>pompa</code>, <code>valve1</code></p>
+        <div id="relayMgr" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="newRelayId" placeholder="id (pompa)" style="flex:1;">
+          <input type="text" id="newRelayLabel" placeholder="Label (Pompa Air)" style="flex:1;">
+          <input type="text" id="newRelayIcon" placeholder="Icon 💧" style="width:70px;">
+          <button class="btn" id="addRelayBtn">+ Tambah</button>
+        </div>
+      </div>
+      <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
+        <h2>Kelola Sensor</h2>
+        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Tambah sensor baru (pH, TDS, kelembapan, dll) — kirim via <code>POST /api/ingest {"ph":7.1}</code> atau serial JSON <code>{"ph":7.1}</code></p>
+        <div id="sensorMgr" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="newSensorId" placeholder="id (ph)" style="flex:1;min-width:90px;">
+          <input type="text" id="newSensorLabel" placeholder="Label (pH Air)" style="flex:1;min-width:120px;">
+          <input type="text" id="newSensorUnit" placeholder="Unit (pH)" style="width:80px;">
+          <input type="text" id="newSensorIcon" placeholder="Icon 🧪" style="width:70px;">
+          <button class="btn" id="addSensorBtn">+ Tambah</button>
+        </div>
+      </div>
+      <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
         <h2>Cron-job.org</h2>
         <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Ambil API key dari <a href="https://console.cron-job.org/settings" target="_blank" rel="noopener">console.cron-job.org → Settings</a>.</p>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -229,7 +249,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     <div class="card"><ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log.</li></ul></div>
   </div>
 
-  <footer><span>aqua v0.1 · dev</span><span id="clock">—</span></footer>
+  <footer><span>santra v0.1 · dev</span><span id="clock">—</span></footer>
 </div>
 <div id="toast" role="status"></div>
 <script>
@@ -276,17 +296,80 @@ async function fetchState(){
     const s=await r.json();render(s);
   }catch(e){$("statusPill").className="status-pill off";$("statusText").textContent="offline"}
 }
+let _relays=[],_sensors=[],_oledOptsBuilt=false;
+async function refreshDefs(){
+  try{
+    const [rR,rS,rSet]=await Promise.all([fetch("/api/relays"),fetch("/api/sensors"),fetch("/api/settings/get")]);
+    if(rR.ok) _relays=await rR.json();
+    if(rS.ok) _sensors=await rS.json();
+    // build oled selects dynamically once
+    if(!_oledOptsBuilt && _sensors.length){
+      const extra=[{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"text",label:"Teks Custom"}];
+      const all=[..._sensors, ...extra];
+      ["setLine1","setLine2","setLine3","setLine4"].forEach(id=>{
+        const sel=$(id); if(!sel) return;
+        const cur=sel.value;
+        sel.innerHTML=all.map(o=>`<option value="${o.id}">${o.label}</option>`).join("");
+        if(cur) sel.value=cur;
+      });
+      _oledOptsBuilt=true;
+      // restore saved oled lines
+      if(rSet.ok){const s=await rSet.json(); ["setLine1","setLine2","setLine3","setLine4"].forEach((k,i)=>{const key=["oled_line1","oled_line2","oled_line3","oled_line4"][i]; if(s[key]) $(k).value=s[key];});}
+    }
+    // jadwal select
+    const sr=$("schedRelay"); if(sr && _relays.length){ const cur=sr.value; sr.innerHTML=_relays.map(r=>`<option value="${r.id}">${r.label} ${r.icon||""}</option>`).join(""); if(cur) sr.value=cur; }
+    // sensor grid placeholder built in render
+    buildRelayMgr(); buildSensorMgr();
+  }catch(e){}
+}
+function buildRelayMgr(){
+  const c=$("relayMgr"); if(!c) return;
+  c.innerHTML=_relays.map(r=>`<div style="display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;"><span style="flex:1;font-size:var(--text-xs);">${r.icon||"🔘"} <b>${r.label}</b> <span style="color:var(--muted)">(${r.id})</span></span><button class="btn" style="padding:6px 10px;min-height:32px;" onclick="delRelay('${r.id}')">Hapus</button></div>`).join("") || '<div style="color:var(--muted);font-size:var(--text-xs);">Belum ada relay — default Lampu & Kipas sudah ada.</div>';
+}
+function buildSensorMgr(){
+  const c=$("sensorMgr"); if(!c) return;
+  c.innerHTML=_sensors.map(s=>`<div style="display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;"><span style="flex:1;font-size:var(--text-xs);">${s.icon||"📟"} <b>${s.label}</b> <span style="color:var(--muted)">(${s.id} · ${s.unit})</span></span><button class="btn" style="padding:6px 10px;min-height:32px;" onclick="delSensor('${s.id}')">Hapus</button></div>`).join("") || '<div style="color:var(--muted);font-size:var(--text-xs);">Belum ada sensor.</div>';
+}
+window.delRelay=async(id)=>{ if(!confirm("Hapus relay "+id+"?")) return; await fetch("/api/relays?id="+encodeURIComponent(id),{method:"DELETE"}); _oledOptsBuilt=false; await refreshDefs(); fetchState(); };
+window.delSensor=async(id)=>{ if(!confirm("Hapus sensor "+id+"?")) return; await fetch("/api/sensors?id="+encodeURIComponent(id),{method:"DELETE"}); _oledOptsBuilt=false; await refreshDefs(); fetchState(); };
+
 function render(s){
   const pill=$("statusPill");pill.className="status-pill "+(s.connected?"on":"off");
   $("statusText").textContent=s.connected?"UNO terhubung":(s.mode==="mock"?"MODE MOCK":"UNO terputus");
-  $("temp").innerHTML=(s.temperature||0).toFixed(1)+'<span>°C</span>';
-  $("current").innerHTML=(s.current||0).toFixed(2)+'<span>A</span>';
-  $("voltage").innerHTML=(s.voltage||0).toFixed(2)+'<span>V</span>';
-  $("power").innerHTML=((s.voltage||0)*(s.current||0)).toFixed(1)+'<span>W</span>';
-  const up=new Date(s.updated_at*1000).toLocaleTimeString("id-ID");
-  $("tempMeta").textContent="update "+up;$("currentMeta").textContent="update "+up;$("voltageMeta").textContent="update "+up;
-  $("lampSwitch").checked=!!s.relay_lamp;$("fanSwitch").checked=!!s.relay_fan;
-  $("lampState").textContent=s.relay_lamp?"ON":"OFF";$("fanState").textContent=s.relay_fan?"ON":"OFF";
+  // sensors grid — generic
+  const grid=$("sensorGrid");
+  if(grid){
+    const sensMap=s.sensors||{};
+    // fallback legacy
+    if(!Object.keys(sensMap).length){ sensMap.temp=s.temperature; sensMap.voltage=s.voltage; sensMap.current=s.current; sensMap.power=(s.voltage||0)*(s.current||0); }
+    const up=new Date(s.updated_at*1000).toLocaleTimeString("id-ID");
+    // use _sensors defs order, fallback to keys
+    let defs=_sensors.length?_sensors: Object.keys(sensMap).map(k=>({id:k,label:k,unit:"",icon:"📟"}));
+    // include power if missing but voltage/current exist
+    grid.innerHTML=defs.map(d=>{
+      const v=sensMap[d.id];
+      const val=(v==null||isNaN(v))?"—": (typeof v==="number"? v.toFixed(d.unit==="°C"||d.id==="temp"?1: d.unit==="W"||d.unit==="V"||d.unit==="A"?1:1): v);
+      return `<div class="card col-3"><h2>${d.icon||""} ${d.label}</h2><div class="big">${val}<span>${d.unit||""}</span></div><div class="meta">update ${up}</div></div>`;
+    }).join("");
+  }
+  // relays — generic
+  const rl=$("relayList");
+  if(rl){
+    const rm=s.relays||{};
+    // fallback legacy
+    if(!Object.keys(rm).length){ rm.lamp=!!s.relay_lamp; rm.fan=!!s.relay_fan; }
+    const defs=_relays.length?_relays: Object.keys(rm).map(k=>({id:k,label:k,icon:"🔘"}));
+    rl.innerHTML=defs.map(d=>{
+      const on=!!rm[d.id];
+      return `<div class="toggle-row"><span class="toggle-label">${d.label} ${d.icon||""}</span><span class="toggle-state">${on?"ON":"OFF"}</span><input type="checkbox" class="switch" data-relay="${d.id}" ${on?"checked":""} aria-label="Toggle ${d.label}"></div>`;
+    }).join("");
+    rl.querySelectorAll("input[data-relay]").forEach(el=>{
+      el.addEventListener("change", async(e)=>{
+        e.target.disabled=true; const ok=await setRelay(e.target.dataset.relay, e.target.checked);
+        if(!ok) e.target.checked=!e.target.checked; e.target.disabled=false; fetchState();
+      });
+    });
+  }
   // host
   if($("hostTemp")){$("hostTemp").textContent=s.host_temp? (s.host_temp.toFixed(1)+" °C"):"—"}
   if($("hostRam")){$("hostRam").textContent=s.host_mem_pct? (s.host_mem_pct.toFixed(0)+" %"):"—"}
@@ -296,8 +379,6 @@ async function setRelay(which,on){
   const r=await fetch("/api/relay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay:which,on})});
   const d=await r.json();if(!r.ok){toast("Gagal: "+(d.error||r.status));return false}return true;
 }
-$("lampSwitch").addEventListener("change",async(e)=>{e.target.disabled=true;const ok=await setRelay("lamp",e.target.checked);if(!ok)e.target.checked=!e.target.checked;e.target.disabled=false});
-$("fanSwitch").addEventListener("change",async(e)=>{e.target.disabled=true;const ok=await setRelay("fan",e.target.checked);if(!ok)e.target.checked=!e.target.checked;e.target.disabled=false});
 $("oledSend").addEventListener("click",async()=>{
   const text=$("oledInput").value.trim();if(!text){toast("Teks kosong");return}
   const btn=$("oledSend");btn.disabled=true;
@@ -312,7 +393,11 @@ fetchOLEDPreview();setInterval(fetchOLEDPreview,5000);
 fetchState();setInterval(fetchState,5000);
 async function loadSettings(){
   try{const r=await fetch("/api/settings/get");const s=await r.json();
-    $("setLine1").value=s.oled_line1;$("setLine2").value=s.oled_line2;$("setLine3").value=s.oled_line3;$("setLine4").value=s.oled_line4;$("setPoll").value=s.poll_interval;
+    if($("setPoll")) $("setPoll").value=s.poll_interval||5;
+    // oled lines handled by refreshDefs, but set if already built
+    if(_oledOptsBuilt){
+      $("setLine1").value=s.oled_line1; $("setLine2").value=s.oled_line2; $("setLine3").value=s.oled_line3; $("setLine4").value=s.oled_line4;
+    }
   }catch(e){}
 }
 $("saveSettings").addEventListener("click",async()=>{
@@ -321,6 +406,32 @@ $("saveSettings").addEventListener("click",async()=>{
   btn.disabled=false;if(r.ok)toast("Setting disimpan ✓");else toast("Gagal simpan");
 });
 loadSettings();
+refreshDefs(); // load relays/sensors + build UI
+// hook tambah relay/sensor
+$("addRelayBtn")?.addEventListener("click", async()=>{
+  const id=$("newRelayId").value.trim().toLowerCase();
+  const label=$("newRelayLabel").value.trim();
+  const icon=$("newRelayIcon").value.trim();
+  if(!id){toast("Isi id relay"); return}
+  if(!/^[a-z0-9_-]+$/.test(id)){toast("ID hanya a-z 0-9 _ -"); return}
+  const r=await fetch("/api/relays",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,label,icon})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){toast("Relay ditambahkan ✓"); $("newRelayId").value="";$("newRelayLabel").value="";$("newRelayIcon").value=""; _oledOptsBuilt=false; await refreshDefs(); fetchState();}
+  else toast("Gagal: "+(d.error||r.status));
+});
+$("addSensorBtn")?.addEventListener("click", async()=>{
+  const id=$("newSensorId").value.trim().toLowerCase();
+  const label=$("newSensorLabel").value.trim();
+  const unit=$("newSensorUnit").value.trim();
+  const icon=$("newSensorIcon").value.trim();
+  if(!id){toast("Isi id sensor"); return}
+  if(!/^[a-z0-9_-]+$/.test(id)){toast("ID hanya a-z 0-9 _ -"); return}
+  const r=await fetch("/api/sensors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,label,unit,icon})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){toast("Sensor ditambahkan ✓"); $("newSensorId").value="";$("newSensorLabel").value="";$("newSensorUnit").value="";$("newSensorIcon").value=""; _oledOptsBuilt=false; await refreshDefs(); fetchState();}
+  else toast("Gagal: "+(d.error||r.status));
+});
+
 async function fetchLogs(){
   try{const r=await fetch("/api/logs");const logs=await r.json();const ul=$("logList");
     if(!logs.length){ul.innerHTML='<li style="color:var(--muted);">Belum ada log.</li>';return}
@@ -338,11 +449,14 @@ async function loadSchedules(){
   try{const r=await fetch("/api/schedules");const list=await r.json();const tb=$("schedBody");
     if(!list.length){tb.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr>';return}
     tb.innerHTML=list.map(s=>{
-      const t=s.relay==="lamp"?"Lampu 💡":"Kipas 🌬️";
+      // lookup label from _relays
+      let t=s.relay; let ic="";
+      const def=_relays.find(x=>x.id===s.relay);
+      if(def){ t=def.label; ic=def.icon||""; }
       const st=s.state==="on"?"ON":"OFF";
       const badge=s.state==="on"?"on":"off";
       const hm=String(s.hour).padStart(2,"0")+":"+String(s.minute).padStart(2,"0");
-      return `<tr><td>${t}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td style="display:flex;gap:4px;"><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="editSched(${s.id},'${hm}')" title="Edit jam">✎</button><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
+      return `<tr><td>${t} ${ic}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td style="display:flex;gap:4px;"><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="editSched(${s.id},'${hm}')" title="Edit jam">✎</button><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
     }).join("");
   }catch(e){}
 }

@@ -28,7 +28,6 @@ func handleOLEDPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateHostStats() {
-	// RAM % dari /proc/meminfo
 	if b, err := os.ReadFile("/proc/meminfo"); err == nil {
 		var total, avail int64
 		for _, l := range strings.Split(string(b), "\n") {
@@ -45,7 +44,6 @@ func updateHostStats() {
 			st.mu.Unlock()
 		}
 	}
-	// load 1m dari /proc/loadavg
 	if b, err := os.ReadFile("/proc/loadavg"); err == nil {
 		f := strings.Fields(string(b))
 		if len(f) > 0 {
@@ -56,12 +54,10 @@ func updateHostStats() {
 			}
 		}
 	}
-	// suhu STB dari thermal_zone0 (jika ada, mis Armbian); Oracle x86 tidak ada -> 0
 	if b, err := os.ReadFile("/sys/class/thermal/thermal_zone0/temp"); err == nil {
 		if v, err := strconv.Atoi(strings.TrimSpace(string(b))); err == nil {
-			// nilai biasa milli-C
 			c := float64(v) / 1000
-			if c > 1000 { // beberapa device sudah dalam C
+			if c > 1000 {
 				c = float64(v)
 			}
 			st.mu.Lock()
@@ -69,11 +65,9 @@ func updateHostStats() {
 			st.mu.Unlock()
 		}
 	}
-	// uptime tidak disimpan; snapshot pakai time.Since(startTime) di handler jika perlu
 }
 
 func parseMemKB(line string) int64 {
-	// "MemTotal:       12213612 kB"
 	f := strings.Fields(line)
 	if len(f) < 2 {
 		return 0
@@ -82,43 +76,94 @@ func parseMemKB(line string) int64 {
 	return v
 }
 
-// render satu line OLED berdasarkan key settings
 func renderOLEDLine(key string) string {
+	// snapshot under lock, then render without holding lock (avoid nested RLock deadlock)
 	st.mu.RLock()
-	defer st.mu.RUnlock()
+	temp := st.Temperature
+	volt := st.Voltage
+	curr := st.Current
+	relayLamp := st.RelayLamp
+	relayFan := st.RelayFan
+	relaysCopy := map[string]bool{}
+	for k, v := range st.Relays {
+		relaysCopy[k] = v
+	}
+	sensorsCopy := map[string]float64{}
+	for k, v := range st.Sensors {
+		sensorsCopy[k] = v
+	}
+	hostTemp := st.HostTemp
+	hostMem := st.HostMemPct
+	hostLoad := st.HostLoad
+	oledText := st.OLEDText
+	st.mu.RUnlock()
+
 	switch key {
 	case "temp":
-		return strconv.FormatFloat(st.Temperature, 'f', 1, 64) + "C air"
+		return strconv.FormatFloat(temp, 'f', 1, 64) + "C air"
 	case "voltage":
-		return strconv.FormatFloat(st.Voltage, 'f', 2, 64) + "V"
+		return strconv.FormatFloat(volt, 'f', 2, 64) + "V"
 	case "current":
-		return strconv.FormatFloat(st.Current, 'f', 2, 64) + "A"
+		return strconv.FormatFloat(curr, 'f', 2, 64) + "A"
 	case "power":
-		return strconv.FormatFloat(st.Voltage*st.Current, 'f', 1, 64) + "W"
+		if v, ok := sensorsCopy["power"]; ok {
+			return strconv.FormatFloat(v, 'f', 1, 64) + "W"
+		}
+		return strconv.FormatFloat(volt*curr, 'f', 1, 64) + "W"
 	case "relay":
-		l, f := "OFF", "OFF"
-		if st.RelayLamp {
-			l = "ON"
+		settings.mu.RLock()
+		rels := append([]RelayDef(nil), settings.Relays...)
+		settings.mu.RUnlock()
+		parts := []string{}
+		for _, rd := range rels {
+			v := relaysCopy[rd.ID]
+			if rd.ID == "lamp" {
+				v = relayLamp
+			}
+			if rd.ID == "fan" {
+				v = relayFan
+			}
+			on := "OFF"
+			if v {
+				on = "ON"
+			}
+			parts = append(parts, rd.ID+":"+on)
 		}
-		if st.RelayFan {
-			f = "ON"
+		if len(parts) == 0 {
+			return "relay --"
 		}
-		return "L:" + l + " F:" + f
+		s := strings.Join(parts, " ")
+		if len(s) > 20 {
+			s = s[:20]
+		}
+		return s
 	case "stb_temp":
-		if st.HostTemp == 0 {
+		if hostTemp == 0 {
 			return "STB --C"
 		}
-		return strconv.FormatFloat(st.HostTemp, 'f', 1, 64) + "C STB"
+		return strconv.FormatFloat(hostTemp, 'f', 1, 64) + "C STB"
 	case "stb_ram":
-		return strconv.FormatFloat(st.HostMemPct, 'f', 0, 64) + "% RAM"
+		return strconv.FormatFloat(hostMem, 'f', 0, 64) + "% RAM"
 	case "stb_load":
-		return strconv.FormatFloat(st.HostLoad, 'f', 2, 64) + " load"
+		return strconv.FormatFloat(hostLoad, 'f', 2, 64) + " load"
 	case "text":
-		if st.OLEDText != "" {
-			return st.OLEDText
+		if oledText != "" {
+			return oledText
 		}
 		return "-"
 	default:
+		if v, ok := sensorsCopy[key]; ok {
+			unit := ""
+			settings.mu.RLock()
+			for _, sd := range settings.Sensors {
+				if sd.ID == key {
+					unit = sd.Unit
+					break
+				}
+			}
+			settings.mu.RUnlock()
+			return strconv.FormatFloat(v, 'f', 1, 64) + unit + " " + key
+		}
 		return "-"
 	}
 }
