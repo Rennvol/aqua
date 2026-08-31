@@ -312,7 +312,7 @@ async function fetchState() {
 function render(s) {
   const pill = $("statusPill");
   pill.className = "status-pill " + (s.connected ? "on" : "off");
-  $("statusText").textContent = s.connected ? "UNO terhubung" : "UNO terputus";
+  $("statusText").textContent = s.connected ? "UNO terhubung" : (s.mode === "mock" ? "MODE MOCK" : "UNO terputus");
 
   $("temp").innerHTML = (s.temperature || 0).toFixed(1) + '<span>°C</span>';
   $("current").innerHTML = (s.current || 0).toFixed(2) + '<span>A</span>';

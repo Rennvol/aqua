@@ -33,6 +33,9 @@ func main() {
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/state", handleState)
 
+	// start sensor source (mock for now, serial when hardware arrives)
+	go RunSerial()
+
 	sub, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		log.Fatal(err)
@@ -72,14 +75,5 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func handleState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"connected":   false,
-		"temperature": 0,
-		"voltage":     0,
-		"current":     0,
-		"relay_lamp":  false,
-		"relay_fan":   false,
-		"oled_text":   "",
-		"updated_at":  time.Now().Unix(),
-	})
+	json.NewEncoder(w).Encode(state.snapshot())
 }
