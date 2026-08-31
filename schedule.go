@@ -152,6 +152,13 @@ func deleteScheduleRemote(s *Schedule) error {
 	return nil
 }
 
+func dbSchedUpsert(s *Schedule) {
+	if db == nil { return }
+	en := 0; if s.Enabled { en = 1 }
+	db.Exec(`INSERT INTO schedules(id,relay,state,hour,minute,enabled,cron_job_id) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET relay=excluded.relay, state=excluded.state, hour=excluded.hour, minute=excluded.minute, enabled=excluded.enabled, cron_job_id=excluded.cron_job_id`, s.ID, s.Relay, s.State, s.Hour, s.Minute, en, s.CronJobID)
+}
+func dbSchedDelete(id int) { if db != nil { db.Exec(`DELETE FROM schedules WHERE id=?`, id) } }
+
 func mustJSON(v interface{}) []byte {
 	b, _ := json.Marshal(v)
 	return b
@@ -222,6 +229,7 @@ func handleScheduleAdd(w http.ResponseWriter, r *http.Request) {
 		settings.PublicURL = scheme + "://" + r.Host
 	}
 	settings.Schedules = append(settings.Schedules, req)
+	dbSchedUpsert(&req)
 	newSched := req // copy before unlock
 	settings.mu.Unlock()
 	saveSettings(settings)
@@ -245,6 +253,7 @@ func handleScheduleAdd(w http.ResponseWriter, r *http.Request) {
 	for i := range settings.Schedules {
 		if settings.Schedules[i].ID == newSched.ID {
 			settings.Schedules[i].CronJobID = newSched.CronJobID
+			dbSchedUpsert(&settings.Schedules[i])
 		}
 	}
 	settings.mu.Unlock()
@@ -284,6 +293,7 @@ func handleScheduleToggle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sched.Enabled = req.Enabled
+	dbSchedUpsert(sched)
 	settings.mu.Unlock()
 	saveSettings(settings)
 
@@ -311,7 +321,8 @@ func handleScheduleDelete(w http.ResponseWriter, r *http.Request) {
 			if settings.Schedules[i].ID == id {
 				cp := settings.Schedules[i]
 				removed = &cp
-				settings.Schedules = append(settings.Schedules[:i], settings.Schedules[i+1:]...)
+					settings.Schedules = append(settings.Schedules[:i], settings.Schedules[i+1:]...)
+				if db != nil { db.Exec(`DELETE FROM schedules WHERE id=?`, id) }
 				break
 			}
 		}

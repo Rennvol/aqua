@@ -51,7 +51,13 @@ func addHistory(temp, volt, curr float64) {
 		historyData = historyData[len(historyData)-historyMax:]
 	}
 	historyMu.Unlock()
-	// append async, best-effort
+	// also insert DB
+	if db != nil {
+		db.Exec(`INSERT OR IGNORE INTO history(t,temp,power,volt,curr) VALUES(?,?,?,?,?)`, p.T, p.Temp, p.Power, p.Volt, p.Curr)
+		// prune keep 600
+		db.Exec(`DELETE FROM history WHERE t NOT IN (SELECT t FROM history ORDER BY t DESC LIMIT ?)`, historyMax)
+	}
+	// append file best-effort
 	b, _ := json.Marshal(p)
 	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {

@@ -37,6 +37,9 @@ func addLog(ip, action string) {
 		logFile.Write(append(b, '\n'))
 		logMu.Unlock()
 	}
+	if db != nil {
+		db.Exec(`INSERT INTO logs(time,ip,action) VALUES(?,?,?)`, e.Time, e.IP, e.Action)
+	}
 }
 
 // accessLog middleware: log page loads (GET /) debounced per-IP (60s)
@@ -67,6 +70,18 @@ func accessLogger(next http.Handler) http.Handler {
 
 func handleLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	if db != nil {
+		rows, err := db.Query(`SELECT time,ip,action FROM logs ORDER BY rowid DESC LIMIT 200`)
+		if err == nil {
+			defer rows.Close()
+			var out []LogEntry
+			for rows.Next() { var e LogEntry; rows.Scan(&e.Time, &e.IP, &e.Action); out = append(out, e) }
+			// reverse to chronological for UI (it reverses again, but keep)
+			for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 { out[i], out[j] = out[j], out[i] }
+			json.NewEncoder(w).Encode(out)
+			return
+		}
+	}
 	if logFile == nil {
 		json.NewEncoder(w).Encode([]LogEntry{})
 		return

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -97,11 +98,32 @@ func saveSettings(s *Settings) {
 	defer s.mu.RUnlock()
 	b, _ := json.MarshalIndent(s, "", "  ")
 	os.WriteFile(settingsPath, b, 0644)
+	if db != nil {
+		dbPersistAll()
+	}
 }
 
 func saveSettingsLocked() {
-	b, _ := json.MarshalIndent(settings, "", "  ")
+	b, _ := json.MarshalIndent(settings, "  ", "  ")
 	os.WriteFile(settingsPath, b, 0644)
+	if db != nil {
+		dbPersistAll()
+	}
+}
+
+func dbPersistAll() {
+	if db == nil {
+		return
+	}
+	kvSet("pin", settings.Pin)
+	kvSet("oled_line1", settings.OLEDLine1)
+	kvSet("oled_line2", settings.OLEDLine2)
+	kvSet("oled_line3", settings.OLEDLine3)
+	kvSet("oled_line4", settings.OLEDLine4)
+	kvSet("poll_interval", fmt.Sprint(settings.PollInterval))
+	kvSet("cron_api_key", settings.CronAPIKey)
+	kvSet("cron_token", settings.CronToken)
+	kvSet("public_url", settings.PublicURL)
 }
 
 func handleGetSettings(w http.ResponseWriter, r *http.Request) {
@@ -188,6 +210,7 @@ func handleRelays(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		settings.Relays = append(settings.Relays, d)
+		if db != nil { db.Exec(`INSERT OR IGNORE INTO relays(id,label,icon) VALUES(?,?,?)`, d.ID, d.Label, d.Icon) }
 		// also init state relay false
 		st.mu.Lock()
 		if st.Relays == nil {
@@ -225,6 +248,7 @@ func handleRelays(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		settings.Relays = append(settings.Relays[:idx], settings.Relays[idx+1:]...)
+		if db != nil { db.Exec(`DELETE FROM relays WHERE id=?`, id) }
 		settings.mu.Unlock()
 		saveSettings(settings)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -258,6 +282,7 @@ func handleSensors(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		settings.Sensors = append(settings.Sensors, d)
+		if db != nil { db.Exec(`INSERT OR IGNORE INTO sensors(id,label,unit,icon) VALUES(?,?,?,?)`, d.ID, d.Label, d.Unit, d.Icon) }
 		settings.mu.Unlock()
 		// init sensor value 0
 		st.mu.Lock()
@@ -294,6 +319,7 @@ func handleSensors(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		settings.Sensors = append(settings.Sensors[:idx], settings.Sensors[idx+1:]...)
+		if db != nil { db.Exec(`DELETE FROM sensors WHERE id=?`, id) }
 		settings.mu.Unlock()
 		saveSettings(settings)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})

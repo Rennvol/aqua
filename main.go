@@ -23,6 +23,8 @@ func init() {
 }
 
 func main() {
+	dbInit()
+	syncSettingsFromDB()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "30221"
@@ -80,7 +82,7 @@ func main() {
 		server.Close()
 	}()
 
-	fmt.Printf("🌊 aqua — :%s\n", port)
+	fmt.Printf("🌊 santra — :%s\n", port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
