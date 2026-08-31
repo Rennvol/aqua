@@ -132,7 +132,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <div class="view" id="view-jadwal">
     <div class="card">
       <h2>Tambah Jadwal</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Relay
           <select id="schedRelay" class="sel"><option value="lamp">Lampu 💡</option><option value="fan">Kipas 🌬️</option></select>
         </label>
@@ -141,6 +141,9 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         </label>
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Jam
           <input type="time" id="schedTime" value="06:00" style="min-width:130px;">
+        </label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;align-items:center;">Aktif
+          <input type="checkbox" id="schedEnabled" checked class="switch" style="width:36px;height:22px;" aria-label="Aktif saat dibuat">
         </label>
       </div>
       <button class="btn primary" id="schedAdd" style="margin-top:10px;width:100%;">+ Tambah jadwal</button>
@@ -315,7 +318,7 @@ async function loadSchedules(){
       const st=s.state==="on"?"ON":"OFF";
       const badge=s.state==="on"?"on":"off";
       const hm=String(s.hour).padStart(2,"0")+":"+String(s.minute).padStart(2,"0");
-      return `<tr><td>${t}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td><button class="btn" style="padding:4px 10px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
+      return `<tr><td>${t}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td style="display:flex;gap:4px;"><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="editSched(${s.id},'${hm}')" title="Edit jam">✎</button><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
     }).join("");
   }catch(e){}
 }
@@ -326,10 +329,20 @@ window.toggleSched=async(id,on)=>{
 window.deleteSched=async(id)=>{
   await fetch("/api/schedule/"+id,{method:"DELETE"});loadSchedules();
 };
+window.editSched=async(id,curHM)=>{
+  const v=prompt("Jam baru (HH:MM)",curHM);
+  if(!v||!/^\d{1,2}:\d{2}$/.test(v))return;
+  const [h,m]=v.split(":").map(Number);
+  if(h<0||h>23||m<0||m>59){toast("Jam tidak valid");return}
+  const r=await fetch("/api/schedule/"+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({hour:h,minute:m})});
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){toast("Jadwal diubah ✓");loadSchedules()}else toast("Gagal: "+(d.error||r.status));
+};
 $("schedAdd").addEventListener("click",async()=>{
   const relay=$("schedRelay").value,state=$("schedState").value;
   const tv=$("schedTime").value||"06:00";const [h,m]=tv.split(":").map(Number);
-  const r=await fetch("/api/schedule",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay,state,hour:h,minute:m})});
+  const enabled=$("schedEnabled").checked;
+  const r=await fetch("/api/schedule",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay,state,hour:h,minute:m,enabled})});
   const d=await r.json();
   if(r.ok){toast("Jadwal ditambahkan ✓");loadSchedules();}else toast("Gagal: "+(d.error||r.status));
 });

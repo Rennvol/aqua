@@ -174,10 +174,22 @@ func handleScheduleAdd(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
 		return
 	}
-	var req Schedule
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var raw struct {
+		Relay   string `json:"relay"`
+		State   string `json:"state"`
+		Hour    int    `json:"hour"`
+		Minute  int    `json:"minute"`
+		Enabled *bool  `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
 		return
+	}
+	req := Schedule{Relay: raw.Relay, State: raw.State, Hour: raw.Hour, Minute: raw.Minute}
+	if raw.Enabled == nil {
+		req.Enabled = true
+	} else {
+		req.Enabled = *raw.Enabled
 	}
 	if req.Relay != "lamp" && req.Relay != "fan" {
 		json.NewEncoder(w).Encode(map[string]string{"error": "relay must be lamp/fan"})
@@ -201,7 +213,6 @@ func handleScheduleAdd(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	req.ID = maxID + 1
-	req.Enabled = true
 	// derive public base URL from this request (scheme + host)
 	scheme := "http"
 	if r.TLS != nil {
@@ -290,36 +301,118 @@ func handleScheduleToggle(w http.ResponseWriter, r *http.Request) {
 
 func handleScheduleDelete(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method != "DELETE" {
-		json.NewEncoder(w).Encode(map[string]string{"error": "DELETE required"})
-		return
-	}
-	// /api/schedule/{id}
-	id, _ := strconv.Atoi(r.PathValue("id"))
-
-	var removed *Schedule
-	settings.mu.Lock()
-	for i := range settings.Schedules {
-		if settings.Schedules[i].ID == id {
-			cp := settings.Schedules[i]
-			removed = &cp
-			settings.Schedules = append(settings.Schedules[:i], settings.Schedules[i+1:]...)
-			break
+	// /api/schedule/{id} — DELETE hapus, PUT update
+	switch r.Method {
+	case "DELETE":
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		var removed *Schedule
+		settings.mu.Lock()
+		for i := range settings.Schedules {
+			if settings.Schedules[i].ID == id {
+				cp := settings.Schedules[i]
+				removed = &cp
+				settings.Schedules = append(settings.Schedules[:i], settings.Schedules[i+1:]...)
+				break
+			}
 		}
-	}
-	settings.mu.Unlock()
-	if removed == nil {
-		json.NewEncoder(w).Encode(map[string]string{"error": "jadwal tak ditemukan"})
+		settings.mu.Unlock()
+		if removed == nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "jadwal tak ditemukan"})
+			return
+		}
+		saveSettings(settings)
+		if err := deleteScheduleRemote(removed); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error()})
+			return
+		}
+		addLog(realIP(r), fmt.Sprintf("jadwal -%d %s", removed.ID, removed.Relay))
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		return
+	case "PUT":
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		var req struct {
+			Relay   string `json:"relay"`
+			State   string `json:"state"`
+			Hour    *int   `json:"hour"`
+			Minute  *int   `json:"minute"`
+			Enabled *bool  `json:"enabled"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
+			return
+		}
+		var sched *Schedule
+		settings.mu.Lock()
+		for i := range settings.Schedules {
+			if settings.Schedules[i].ID == id {
+				sched = &settings.Schedules[i]
+				break
+			}
+		}
+		if sched == nil {
+			settings.mu.Unlock()
+			json.NewEncoder(w).Encode(map[string]string{"error": "jadwal tak ditemukan"})
+			return
+		}
+		if req.Relay != "" {
+			if req.Relay != "lamp" && req.Relay != "fan" {
+				settings.mu.Unlock()
+				json.NewEncoder(w).Encode(map[string]string{"error": "relay must be lamp/fan"})
+				return
+			}
+			sched.Relay = req.Relay
+		}
+		if req.State != "" {
+			if req.State != "on" && req.State != "off" {
+				settings.mu.Unlock()
+				json.NewEncoder(w).Encode(map[string]string{"error": "state must be on/off"})
+				return
+			}
+			sched.State = req.State
+		}
+		if req.Hour != nil {
+			if *req.Hour < 0 || *req.Hour > 23 {
+				settings.mu.Unlock()
+				json.NewEncoder(w).Encode(map[string]string{"error": "jam di luar range"})
+				return
+			}
+			sched.Hour = *req.Hour
+		}
+		if req.Minute != nil {
+			if *req.Minute < 0 || *req.Minute > 59 {
+				settings.mu.Unlock()
+				json.NewEncoder(w).Encode(map[string]string{"error": "menit di luar range"})
+				return
+			}
+			sched.Minute = *req.Minute
+		}
+		if req.Enabled != nil {
+			sched.Enabled = *req.Enabled
+		}
+		// keep copy before unlock for push
+		cp := *sched
+		settings.mu.Unlock()
+		saveSettings(settings)
+		if err := pushSchedule(&cp); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error()})
+			return
+		}
+		// persist cron_job_id if created (edge)
+		settings.mu.Lock()
+		for i := range settings.Schedules {
+			if settings.Schedules[i].ID == id {
+				settings.Schedules[i].CronJobID = cp.CronJobID
+			}
+		}
+		settings.mu.Unlock()
+		saveSettings(settings)
+		addLog(realIP(r), fmt.Sprintf("jadwal ~%d %s %s %02d:%02d", id, cp.Relay, cp.State, cp.Hour, cp.Minute))
+		json.NewEncoder(w).Encode(cp)
+		return
+	default:
+		json.NewEncoder(w).Encode(map[string]string{"error": "DELETE or PUT required"})
 		return
 	}
-	saveSettings(settings)
-
-	if err := deleteScheduleRemote(removed); err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error()})
-		return
-	}
-	addLog(realIP(r), fmt.Sprintf("jadwal -%d %s", removed.ID, removed.Relay))
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 // handleCron executes a relay on/off from cron-job.org hit.
