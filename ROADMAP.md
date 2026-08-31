@@ -32,6 +32,9 @@ Deploy: Oracle = dev only (port 30221) → push GitHub → user git pull di STB 
 - Rollback: jadwal yang gagal dibuat di cron-job.org gak disimpan
 - **Selesai kalau:** tambah jadwal → job kepush ke cron-job.org; curl endpoint cron eksekusi + muncul di log; hapus → job kehapus remote
 
-## Fase 4 — Polish
-- Mobile polish (tombol 44px+, kartu rapi), status relay konsisten, error handling serial, README deploy STB
-- **Selesai kalau:** dipakai di HP + PC, gak ada komplain UI
+## Fase 4 — Login PIN 4 digit ✅
+- Overlay login PIN 4 angka (`POST /api/login` → cookie `aqua_session` HttpOnly 24h), middleware `authMW` proteksi /api/* (kecuali /health & /api/cron/*)
+- Ganti PIN dari Settings (`POST /api/pin`, validasi 4 digit numerik), simpan `config.json`, log "ganti PIN"
+- Logout `POST /api/logout` hapus session + cookie
+- Auto-skip overlay jika cookie masih valid (`GET /api/state` 200)
+- **Selesai kalau:** tanpa login /api/state 401; login PIN salah 401; login benar → state 200; ganti PIN → login lama gagal, baru ok; cron & health tetap publik

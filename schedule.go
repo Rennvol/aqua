@@ -326,7 +326,7 @@ func handleScheduleDelete(w http.ResponseWriter, r *http.Request) {
 // GET /api/cron/{token}/{relay}/{state}
 func handleCron(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) < 4 || parts[0] != "api" || parts[1] != "cron" {
+	if len(parts) < 5 || parts[0] != "api" || parts[1] != "cron" {
 		http.Error(w, "not found", 404)
 		return
 	}

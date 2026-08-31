@@ -9,6 +9,7 @@ import (
 
 type Settings struct {
 	mu           sync.RWMutex
+	Pin          string     `json:"pin"` // 4-digit PIN login
 	OLEDLine1    string     `json:"oled_line1"`    // what to show on OLED line 1
 	OLEDLine2    string     `json:"oled_line2"`    // line 2
 	OLEDLine3    string     `json:"oled_line3"`    // line 3
@@ -24,6 +25,7 @@ var settingsPath = "config.json"
 
 func defaultSettings() *Settings {
 	return &Settings{
+		Pin:          "1234", // default PIN login, ganti di Settings
 		OLEDLine1:    "temp",
 		OLEDLine2:    "current",
 		OLEDLine3:    "voltage",

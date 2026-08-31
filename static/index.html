@@ -193,6 +193,15 @@ footer {
 </style>
 </head>
 <body>
+<div id="loginOverlay" style="position:fixed;inset:0;background:var(--paper);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em;">aqua.</div>
+  <div style="color:var(--muted);font-size:var(--text-xs);">Masuk pake PIN 4 angka</div>
+  <input type="password" id="loginPin" inputmode="numeric" maxlength="4" pattern="[0-9]*"
+    placeholder="••••"
+    style="width:120px;text-align:center;font-size:24px;letter-spacing:12px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font-family:var(--font);">
+  <button class="btn primary" id="loginBtn" style="min-width:120px;">Masuk</button>
+  <div id="loginErr" style="color:var(--danger,#e5484d);font-size:var(--text-xs);display:none;">PIN salah, coba lagi</div>
+</div>
 <div class="wrap">
   <header>
     <div class="logo">aqua<span class="dot">.</span></div>
@@ -306,6 +315,11 @@ footer {
         </label>
         <button class="btn primary" id="saveSettings" style="margin-left:auto;">Simpan</button>
       </div>
+      <div style="margin-top:12px;border-top:1px solid var(--rule);padding-top:12px;display:flex;gap:8px;align-items:center;">
+        <label style="font-size:var(--text-xs);color:var(--muted);">Ganti PIN</label>
+        <input type="password" id="setPin" inputmode="numeric" maxlength="4" placeholder="4 angka" style="width:90px;">
+        <button class="btn" id="savePin">Simpan</button>
+      </div>
       <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
         <h2>Cron-job.org</h2>
         <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">
@@ -355,6 +369,41 @@ footer {
 "use strict";
 const $ = (id) => document.getElementById(id);
 
+/* ── login ── */
+async function tryLogin(pin) {
+  const r = await fetch("/api/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({pin})
+  });
+  return r.ok;
+}
+$("loginBtn").addEventListener("click", async () => {
+  const pin = $("loginPin").value;
+  if (!/^[0-9]{4}$/.test(pin)) { return; }
+  const ok = await tryLogin(pin);
+  if (ok) {
+    $("loginOverlay").style.display = "none";
+    initApp();
+  } else {
+    $("loginErr").style.display = "block";
+    $("loginPin").value = "";
+  }
+});
+$("loginPin").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("loginBtn").click();
+});
+// auto-skip jika sudah login (cookie masih valid)
+(async () => {
+  const r = await fetch("/api/state");
+  if (r.ok) {
+    $("loginOverlay").style.display = "none";
+    initApp();
+  }
+})();
+
+/* ── app init (hanya jalan setelah login) ── */
+function initApp() {
 /* ── tema ── */
 const themeBtn = $("themeBtn");
 function applyTheme(t) {
@@ -581,6 +630,21 @@ $("schedAdd").addEventListener("click", async () => {
 });
 loadSchedules();
 setInterval(loadSchedules, 15000);
+
+/* ── ganti PIN ── */
+$("savePin").addEventListener("click", async () => {
+  const pin = $("setPin").value.trim();
+  if (!/^[0-9]{4}$/.test(pin)) { toast("PIN harus 4 angka"); return; }
+  const r = await fetch("/api/pin", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({pin})
+  });
+  const d = await r.json().catch(()=>({}));
+  if (r.ok) { toast("PIN diganti ✓"); $("setPin").value=""; }
+  else toast("Gagal: " + (d.error || r.status));
+});
+} // end initApp
 </script>
 </body>
 </html>

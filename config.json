@@ -1,4 +1,5 @@
 {
+  "pin": "1234",
   "oled_line1": "temp",
   "oled_line2": "voltage",
   "oled_line3": "relay",
