@@ -124,7 +124,23 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <h2>OLED</h2>
         <textarea id="oledInput" placeholder="Teks buat OLED (mis. SUHU 28.5C LAMPU ON)" maxlength="128"></textarea>
         <div style="display:flex;gap:8px;margin-top:8px;"><button class="btn primary" id="oledSend" style="flex:1;">Kirim ke OLED</button></div>
+        <div style="margin-top:10px;padding:8px 10px;border:1px dashed var(--rule);border-radius:8px;background:var(--paper);font-size:var(--text-xs);line-height:1.6;">
+          <div style="color:var(--muted);font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Preview line 1-4 (sesuai Settings)</div>
+          <div id="oledPreview" style="white-space:pre-line;min-height:56px;">—</div>
+        </div>
       </div>
+    </div>
+    <div class="grid" style="margin-top:var(--space-4)">
+      <div class="card col-6">
+        <h2>STB Host</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:var(--text-sm);">
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Suhu</div><div id="hostTemp" style="font-weight:600;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">RAM</div><div id="hostRam" style="font-weight:600;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Load 1m</div><div id="hostLoad" style="font-weight:600;">—</div></div>
+        </div>
+        <div class="meta" style="margin-top:8px;">/proc + thermal_zone0 (STB = ada, Oracle = --)</div>
+      </div>
+      <div class="card col-6" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--text-xs);">Atur line OLED di Settings → pilih Suhu STB / RAM STB / Load STB / Daya</div>
     </div>
   </div>
 
@@ -182,10 +198,10 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     <div class="card">
       <h2>Isi OLED (line 1-4)</h2>
       <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;" id="oledGrid">
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1<select id="setLine1" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2<select id="setLine2" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3<select id="setLine3" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4<select id="setLine4" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1<select id="setLine1" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2<select id="setLine2" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3<select id="setLine3" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4<select id="setLine4" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:6px;">Polling (detik)<input type="number" id="setPoll" min="2" max="60" value="5" style="width:70px;"></label>
@@ -271,6 +287,10 @@ function render(s){
   $("tempMeta").textContent="update "+up;$("currentMeta").textContent="update "+up;$("voltageMeta").textContent="update "+up;
   $("lampSwitch").checked=!!s.relay_lamp;$("fanSwitch").checked=!!s.relay_fan;
   $("lampState").textContent=s.relay_lamp?"ON":"OFF";$("fanState").textContent=s.relay_fan?"ON":"OFF";
+  // host
+  if($("hostTemp")){$("hostTemp").textContent=s.host_temp? (s.host_temp.toFixed(1)+" °C"):"—"}
+  if($("hostRam")){$("hostRam").textContent=s.host_mem_pct? (s.host_mem_pct.toFixed(0)+" %"):"—"}
+  if($("hostLoad")){$("hostLoad").textContent=s.host_load? s.host_load.toFixed(2):"—"}
 }
 async function setRelay(which,on){
   const r=await fetch("/api/relay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay:which,on})});
@@ -285,6 +305,10 @@ $("oledSend").addEventListener("click",async()=>{
   const d=await r.json();btn.disabled=false;
   if(r.ok){toast("Dikirim ke OLED ✓");$("oledInput").value=""}else toast("Gagal: "+(d.error||r.status));
 });
+async function fetchOLEDPreview(){
+  try{const r=await fetch("/api/oled/preview");if(!r.ok)return;const d=await r.json();const el=$("oledPreview");if(el&&d.lines)el.textContent=d.lines.map((l,i)=> (i+1)+": "+l).join("\n")}catch(e){}
+}
+fetchOLEDPreview();setInterval(fetchOLEDPreview,5000);
 fetchState();setInterval(fetchState,5000);
 async function loadSettings(){
   try{const r=await fetch("/api/settings/get");const s=await r.json();

@@ -47,7 +47,9 @@ func main() {
 	mux.HandleFunc("/api/schedule/{id}", authMW(handleScheduleDelete))
 	mux.HandleFunc("/api/pin", authMW(handleChangePin))
 	mux.HandleFunc("/api/history", authMW(handleHistory))
+	mux.HandleFunc("/api/oled/preview", authMW(handleOLEDPreview))
 
+	go hostLoop()
 	go RunSerial()
 	ensureToken()
 

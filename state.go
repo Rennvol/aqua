@@ -17,6 +17,9 @@ type State struct {
 	OLEDText    string  `json:"oled_text"`
 	UpdatedAt   int64   `json:"updated_at"`
 	Mode        string  `json:"mode"` // "mock" | "serial"
+	HostTemp   float64 `json:"host_temp"`    // STB/Armbian thermal_zone0 °C (0 jika tidak ada)
+	HostMemPct float64 `json:"host_mem_pct"` // RAM terpakai %
+	HostLoad   float64 `json:"host_load"`    // load 1m
 }
 
 // st is the shared state instance.
@@ -35,6 +38,9 @@ func (s *State) snapshot() State {
 		OLEDText:    s.OLEDText,
 		UpdatedAt:   s.UpdatedAt,
 		Mode:        s.Mode,
+		HostTemp:   s.HostTemp,
+		HostMemPct: s.HostMemPct,
+		HostLoad:   s.HostLoad,
 	}
 }
 
