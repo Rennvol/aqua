@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>aqua — kontrol akuarium</title>
+<style>
+/* Hallmark · macrostructure: Bento Grid · theme: custom · vibe: "fresh aquarium console" 
+ * paper dark: oklch(13% 0.010 200) · paper light: oklch(98% 0.006 200) · accent: oklch(72% 0.13 200)
+ * display: JetBrains Mono · body: JetBrains Mono · axes: dark/light / mono / chromatic-teal
+ * genre: atmospheric (dark) / modern-minimal (light) · studied: no · v0.1.0
+ */
+:root {
+  --paper: oklch(13% 0.010 200);
+  --paper-2: oklch(17% 0.012 200);
+  --paper-3: oklch(22% 0.012 200);
+  --ink: oklch(94% 0.008 200);
+  --ink-2: oklch(72% 0.010 200);
+  --rule: oklch(30% 0.012 200);
+  --muted: oklch(58% 0.012 200);
+  --accent: oklch(72% 0.13 200);
+  --accent-ink: oklch(15% 0.01 200);
+  --focus: oklch(78% 0.17 200);
+  --good: oklch(72% 0.15 145);
+  --bad: oklch(68% 0.19 25);
+  --font: "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+  --text-2xs: 0.65rem; --text-xs: 0.75rem; --text-sm: 0.85rem;
+  --text-base: 1rem; --text-lg: 1.25rem; --text-xl: 1.5rem; --text-2xl: 2rem;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms;
+  --radius: 10px;
+}
+[data-theme="light"] {
+  --paper: oklch(98% 0.006 200);
+  --paper-2: oklch(96% 0.008 200);
+  --paper-3: oklch(93% 0.010 200);
+  --ink: oklch(20% 0.012 200);
+  --ink-2: oklch(42% 0.012 200);
+  --rule: oklch(86% 0.010 200);
+  --muted: oklch(52% 0.012 200);
+  --accent: oklch(50% 0.13 200);
+  --accent-ink: oklch(99% 0.005 200);
+  --focus: oklch(48% 0.17 200);
+  --good: oklch(50% 0.15 145);
+  --bad: oklch(55% 0.19 25);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overflow-x: clip; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  min-height: 100dvh;
+  transition: background var(--dur-3) var(--ease-out), color var(--dur-3) var(--ease-out);
+}
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* Layout */
+.wrap { max-width: 900px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3); padding: var(--space-3) 0 var(--space-5);
+  border-bottom: 1px solid var(--rule); margin-bottom: var(--space-5);
+}
+.logo { font-size: var(--text-lg); font-weight: 700; letter-spacing: -0.02em; }
+.logo .dot { color: var(--accent); }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--text-xs); padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--rule); color: var(--ink-2);
+}
+.status-pill .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background var(--dur-2); }
+.status-pill.on .led { background: var(--good); box-shadow: 0 0 6px var(--good); }
+.status-pill.off .led { background: var(--bad); box-shadow: 0 0 6px var(--bad); }
+
+/* Grid — bento */
+.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(12, 1fr); }
+.card {
+  background: var(--paper-2); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: var(--space-4); min-width: 0;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), background var(--dur-3);
+}
+.card h2 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; margin-bottom: var(--space-3); }
+.big { font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.03em; }
+.big small { font-size: var(--text-sm); color: var(--muted); font-weight: 400; }
+.meta { font-size: var(--text-2xs); color: var(--muted); margin-top: var(--space-2); }
+.col-3 { grid-column: span 3; }
+.col-6 { grid-column: span 6; }
+.col-12 { grid-column: span 12; }
+
+/* Toggle switches */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; }
+.toggle-row + .toggle-row { border-top: 1px solid var(--rule); }
+.toggle-label { font-size: var(--text-sm); }
+.toggle-state { font-size: var(--text-xs); color: var(--muted); min-width: 32px; text-align: right; }
+.switch {
+  position: relative; width: 52px; height: 30px; flex-shrink: 0;
+  appearance: none; background: var(--paper-3); border: 1px solid var(--rule);
+  border-radius: 999px; cursor: pointer; transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2);
+}
+.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--ink-2); transition: transform var(--dur-2) var(--ease-out), background var(--dur-2);
+}
+.switch:checked { background: var(--accent); border-color: var(--accent); }
+.switch:checked::after { transform: translateX(22px); background: var(--accent-ink); }
+.switch:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Input */
+input[type="text"], textarea {
+  width: 100%; background: var(--paper); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 8px;
+  padding: 10px 12px; font-family: var(--font); font-size: 16px;
+  transition: border-color var(--dur-2);
+}
+input[type="text"]:focus, textarea:focus { border-color: var(--accent); outline: none; }
+textarea { resize: vertical; min-height: 64px; }
+
+/* Buttons */
+.btn {
+  appearance: none; border: none; cursor: pointer; border-radius: 8px;
+  background: var(--paper-3); color: var(--ink); font-family: var(--font);
+  font-size: var(--text-sm); padding: 10px 16px; min-height: 44px;
+  transition: transform var(--dur-1) var(--ease-out), background var(--dur-2), box-shadow var(--dur-2);
+}
+.btn:hover { background: var(--paper-3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover { box-shadow: 0 2px 12px var(--accent); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Logs */
+.log-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); max-height: 320px; overflow-y: auto; }
+.log-list li {
+  font-size: var(--text-xs); padding: 8px 10px; border-radius: 6px;
+  background: var(--paper); border: 1px solid var(--rule);
+  display: flex; gap: 8px; align-items: baseline; word-break: break-all;
+}
+.log-time { color: var(--muted); flex-shrink: 0; }
+.log-msg { color: var(--ink-2); }
+
+/* Theme toggle */
+.theme-btn {
+  background: none; border: 1px solid var(--rule); color: var(--ink-2);
+  border-radius: 999px; min-height: 36px; padding: 4px 14px;
+  font-size: var(--text-xs); cursor: pointer; font-family: var(--font);
+  transition: border-color var(--dur-2), color var(--dur-2);
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--ink); }
+
+/* Section spacing */
+section { margin-top: var(--space-6); }
+section h1 { font-size: var(--text-xl); letter-spacing: -0.02em; margin-bottom: var(--space-4); }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--paper-3); color: var(--ink); border: 1px solid var(--rule);
+  padding: 10px 18px; border-radius: 999px; font-size: var(--text-sm);
+  opacity: 0; pointer-events: none; transition: opacity var(--dur-2), transform var(--dur-2);
+  z-index: 50; max-width: 90vw;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+footer {
+  margin-top: var(--space-7); padding-top: var(--space-4);
+  border-top: 1px solid var(--rule); font-size: var(--text-2xs); color: var(--muted);
+  display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .col-3 { grid-column: span 6; }
+  .col-6 { grid-column: span 12; }
+  .grid { gap: var(--space-3); }
+}
+@media (max-width: 414px) {
+  .col-3 { grid-column: span 12; }
+  .wrap { padding: var(--space-4) var(--space-3) var(--space-6); }
+  .big { font-size: var(--text-xl); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">aqua<span class="dot">.</span></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="status-pill" id="statusPill"><span class="led"></span><span id="statusText">—</span></span>
+      <button class="theme-btn" id="themeBtn" aria-label="Ganti tema">☾ / ☀</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card col-3">
+      <h2>Suhu Air</h2>
+      <div class="big" id="temp">--.<span>°C</span></div>
+      <div class="meta" id="tempMeta">—</div>
+    </div>
+    <div class="card col-3">
+      <h2>Arus</h2>
+      <div class="big" id="current">--.<span>A</span></div>
+      <div class="meta" id="currentMeta">—</div>
+    </div>
+    <div class="card col-3">
+      <h2>Tegangan</h2>
+      <div class="big" id="voltage">--.<span>V</span></div>
+      <div class="meta" id="voltageMeta">—</div>
+    </div>
+    <div class="card col-3">
+      <h2>Daya</h2>
+      <div class="big" id="power">--.<span>W</span></div>
+      <div class="meta">V × A</div>
+    </div>
+  </div>
+
+  <section>
+    <h1>Kontrol</h1>
+    <div class="grid">
+      <div class="card col-6">
+        <h2>Relay</h2>
+        <div class="toggle-row">
+          <span class="toggle-label">Lampu 💡</span>
+          <span class="toggle-state" id="lampState">OFF</span>
+          <input type="checkbox" class="switch" id="lampSwitch" aria-label="Toggle lampu">
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Kipas 🌬️</span>
+          <span class="toggle-state" id="fanState">OFF</span>
+          <input type="checkbox" class="switch" id="fanSwitch" aria-label="Toggle kipas">
+        </div>
+      </div>
+      <div class="card col-6">
+        <h2>OLED</h2>
+        <textarea id="oledInput" placeholder="Teks buat OLED (mis. SUHU 28.5C LAMPU ON)" maxlength="128"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn primary" id="oledSend" style="flex:1;">Kirim ke OLED</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h1>Log</h1>
+    <div class="card col-12" style="grid-column:span 12;">
+      <ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log — akses web & aksi tercatat di sini.</li></ul>
+    </div>
+  </section>
+
+  <footer>
+    <span>aqua v0.1 · dev</span>
+    <span id="clock">—</span>
+  </footer>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+/* ── tema ── */
+const themeBtn = $("themeBtn");
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === "dark" ? "☀" : "☾";
+}
+let theme = localStorage.getItem("aqua-theme") || "dark";
+applyTheme(theme);
+themeBtn.addEventListener("click", () => {
+  theme = theme === "dark" ? "light" : "dark";
+  localStorage.setItem("aqua-theme", theme);
+  applyTheme(theme);
+});
+
+/* ── toast ── */
+let toastTimer;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+/* ── clock ── */
+function tick() { $("clock").textContent = new Date().toLocaleString("id-ID"); }
+setInterval(tick, 1000); tick();
+
+/* ── status ── */
+async function fetchState() {
+  try {
+    const r = await fetch("/api/state");
+    const s = await r.json();
+    render(s);
+  } catch (e) {
+    $("statusPill").className = "status-pill off";
+    $("statusText").textContent = "offline";
+  }
+}
+
+function render(s) {
+  const pill = $("statusPill");
+  pill.className = "status-pill " + (s.connected ? "on" : "off");
+  $("statusText").textContent = s.connected ? "UNO terhubung" : "UNO terputus";
+
+  $("temp").innerHTML = (s.temperature || 0).toFixed(1) + '<span>°C</span>';
+  $("current").innerHTML = (s.current || 0).toFixed(2) + '<span>A</span>';
+  $("voltage").innerHTML = (s.voltage || 0).toFixed(2) + '<span>V</span>';
+  $("power").innerHTML = ((s.voltage||0) * (s.current||0)).toFixed(1) + '<span>W</span>';
+
+  const up = new Date(s.updated_at * 1000).toLocaleTimeString("id-ID");
+  $("tempMeta").textContent = "update " + up;
+  $("currentMeta").textContent = "update " + up;
+  $("voltageMeta").textContent = "update " + up;
+
+  $("lampSwitch").checked = !!s.relay_lamp;
+  $("fanSwitch").checked = !!s.relay_fan;
+  $("lampState").textContent = s.relay_lamp ? "ON" : "OFF";
+  $("fanState").textContent = s.relay_fan ? "ON" : "OFF";
+}
+
+/* ── relay ── */
+async function setRelay(which, on) {
+  const r = await fetch("/api/relay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ relay: which, on })
+  });
+  const d = await r.json();
+  if (!r.ok) { toast("Gagal: " + (d.error || r.status)); return false; }
+  return true;
+}
+$("lampSwitch").addEventListener("change", async (e) => {
+  e.target.disabled = true;
+  const ok = await setRelay("lamp", e.target.checked);
+  if (!ok) { e.target.checked = !e.target.checked; }
+  e.target.disabled = false;
+});
+$("fanSwitch").addEventListener("change", async (e) => {
+  e.target.disabled = true;
+  const ok = await setRelay("fan", e.target.checked);
+  if (!ok) { e.target.checked = !e.target.checked; }
+  e.target.disabled = false;
+});
+
+/* ── oled ── */
+$("oledSend").addEventListener("click", async () => {
+  const text = $("oledInput").value.trim();
+  if (!text) { toast("Teks kosong"); return; }
+  const btn = $("oledSend");
+  btn.disabled = true;
+  const r = await fetch("/api/oled", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text })
+  });
+  const d = await r.json();
+  btn.disabled = false;
+  if (r.ok) { toast("Dikirim ke OLED ✓"); $("oledInput").value = ""; }
+  else toast("Gagal: " + (d.error || r.status));
+});
+
+/* ── poll ── */
+fetchState();
+setInterval(fetchState, 5000);
+</script>
+</body>
+</html>
