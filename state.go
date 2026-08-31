@@ -40,11 +40,12 @@ func (s *State) snapshot() State {
 
 func (s *State) setSensor(t, v, i float64) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.Temperature = t
 	s.Voltage = v
 	s.Current = i
 	s.UpdatedAt = time.Now().Unix()
+	s.mu.Unlock()
+	addHistory(t, v, i)
 }
 
 func (s *State) setRelay(which string, on bool) {

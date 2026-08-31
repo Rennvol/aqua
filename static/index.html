@@ -5,202 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>aqua — kontrol akuarium</title>
 <style>
-/* Hallmark · macrostructure: Bento Grid · theme: custom · vibe: "fresh aquarium console" 
- * paper dark: oklch(13% 0.010 200) · paper light: oklch(98% 0.006 200) · accent: oklch(72% 0.13 200)
- * display: JetBrains Mono · body: JetBrains Mono · axes: dark/light / mono / chromatic-teal
- * genre: atmospheric (dark) / modern-minimal (light) · studied: no · v0.1.0
- */
-:root {
-  --paper: oklch(13% 0.010 200);
-  --paper-2: oklch(17% 0.012 200);
-  --paper-3: oklch(22% 0.012 200);
-  --ink: oklch(94% 0.008 200);
-  --ink-2: oklch(72% 0.010 200);
-  --rule: oklch(30% 0.012 200);
-  --muted: oklch(58% 0.012 200);
-  --accent: oklch(72% 0.13 200);
-  --accent-ink: oklch(15% 0.01 200);
-  --focus: oklch(78% 0.17 200);
-  --good: oklch(72% 0.15 145);
-  --bad: oklch(68% 0.19 25);
-  --font: "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-  --space-5: 24px; --space-6: 32px; --space-7: 48px;
-  --text-2xs: 0.65rem; --text-xs: 0.75rem; --text-sm: 0.85rem;
-  --text-base: 1rem; --text-lg: 1.25rem; --text-xl: 1.5rem; --text-2xl: 2rem;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in: cubic-bezier(0.55, 0.06, 0.68, 0.19);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms;
-  --radius: 10px;
+:root{
+  --paper:oklch(13% 0.010 200);--paper-2:oklch(17% 0.012 200);--paper-3:oklch(22% 0.012 200);
+  --ink:oklch(94% 0.008 200);--ink-2:oklch(72% 0.010 200);--rule:oklch(30% 0.012 200);--muted:oklch(58% 0.012 200);
+  --accent:oklch(72% 0.13 200);--accent-ink:oklch(15% 0.01 200);--focus:oklch(78% 0.17 200);
+  --good:oklch(72% 0.15 145);--bad:oklch(68% 0.19 25);
+  --font:"JetBrains Mono","Cascadia Code","Fira Code",ui-monospace,monospace;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
+  --text-2xs:0.65rem;--text-xs:0.75rem;--text-sm:0.85rem;--text-base:1rem;--text-lg:1.25rem;--text-xl:1.5rem;--text-2xl:2rem;
+  --ease-out:cubic-bezier(0.22,1,0.36,1);--dur-1:120ms;--dur-2:200ms;--dur-3:320ms;--radius:10px;
 }
-[data-theme="light"] {
-  --paper: oklch(98% 0.006 200);
-  --paper-2: oklch(96% 0.008 200);
-  --paper-3: oklch(93% 0.010 200);
-  --ink: oklch(20% 0.012 200);
-  --ink-2: oklch(42% 0.012 200);
-  --rule: oklch(86% 0.010 200);
-  --muted: oklch(52% 0.012 200);
-  --accent: oklch(50% 0.13 200);
-  --accent-ink: oklch(99% 0.005 200);
-  --focus: oklch(48% 0.17 200);
-  --good: oklch(50% 0.15 145);
-  --bad: oklch(55% 0.19 25);
+[data-theme="light"]{
+  --paper:oklch(98% 0.006 200);--paper-2:oklch(96% 0.008 200);--paper-3:oklch(93% 0.010 200);
+  --ink:oklch(20% 0.012 200);--ink-2:oklch(42% 0.012 200);--rule:oklch(86% 0.010 200);--muted:oklch(52% 0.012 200);
+  --accent:oklch(50% 0.13 200);--accent-ink:oklch(99% 0.005 200);--focus:oklch(48% 0.17 200);
+  --good:oklch(50% 0.15 145);--bad:oklch(55% 0.19 25);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow-x: clip; }
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font);
-  font-size: var(--text-base);
-  line-height: 1.55;
-  min-height: 100dvh;
-  transition: background var(--dur-3) var(--ease-out), color var(--dur-3) var(--ease-out);
-}
-a { color: var(--accent); }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-::selection { background: var(--accent); color: var(--accent-ink); }
-
-/* Layout */
-.wrap { max-width: 900px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
-header {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: var(--space-3); padding: var(--space-3) 0 var(--space-5);
-  border-bottom: 1px solid var(--rule); margin-bottom: var(--space-5);
-}
-.logo { font-size: var(--text-lg); font-weight: 700; letter-spacing: -0.02em; }
-.logo .dot { color: var(--accent); }
-.status-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: var(--text-xs); padding: 4px 10px; border-radius: 999px;
-  border: 1px solid var(--rule); color: var(--ink-2);
-}
-.status-pill .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background var(--dur-2); }
-.status-pill.on .led { background: var(--good); box-shadow: 0 0 6px var(--good); }
-.status-pill.off .led { background: var(--bad); box-shadow: 0 0 6px var(--bad); }
-
-/* Grid — bento */
-.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(12, 1fr); }
-.card {
-  background: var(--paper-2); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: var(--space-4); min-width: 0;
-  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), background var(--dur-3);
-}
-.card h2 { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; margin-bottom: var(--space-3); }
-.big { font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.03em; }
-.big small { font-size: var(--text-sm); color: var(--muted); font-weight: 400; }
-.meta { font-size: var(--text-2xs); color: var(--muted); margin-top: var(--space-2); }
-.col-3 { grid-column: span 3; }
-.col-6 { grid-column: span 6; }
-.col-12 { grid-column: span 12; }
-
-/* Toggle switches */
-.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; }
-.toggle-row + .toggle-row { border-top: 1px solid var(--rule); }
-.toggle-label { font-size: var(--text-sm); }
-.toggle-state { font-size: var(--text-xs); color: var(--muted); min-width: 32px; text-align: right; }
-.switch {
-  position: relative; width: 52px; height: 30px; flex-shrink: 0;
-  appearance: none; background: var(--paper-3); border: 1px solid var(--rule);
-  border-radius: 999px; cursor: pointer; transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2);
-}
-.switch::after {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
-  border-radius: 50%; background: var(--ink-2); transition: transform var(--dur-2) var(--ease-out), background var(--dur-2);
-}
-.switch:checked { background: var(--accent); border-color: var(--accent); }
-.switch:checked::after { transform: translateX(22px); background: var(--accent-ink); }
-.switch:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* Input */
-input[type="text"], textarea, .sel {
-  width: 100%; background: var(--paper); color: var(--ink);
-  border: 1px solid var(--rule); border-radius: 8px;
-  padding: 10px 12px; font-family: var(--font); font-size: 16px;
-  transition: border-color var(--dur-2);
-}
-input[type="text"]:focus, textarea:focus, .sel:focus { border-color: var(--accent); outline: none; }
-textarea { resize: vertical; min-height: 64px; }
-
-/* Buttons */
-.btn {
-  appearance: none; border: none; cursor: pointer; border-radius: 8px;
-  background: var(--paper-3); color: var(--ink); font-family: var(--font);
-  font-size: var(--text-sm); padding: 10px 16px; min-height: 44px;
-  transition: transform var(--dur-1) var(--ease-out), background var(--dur-2), box-shadow var(--dur-2);
-}
-.btn:hover { background: var(--paper-3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-.btn:active { transform: translateY(1px); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.btn.primary:hover { box-shadow: 0 2px 12px var(--accent); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* Logs */
-.log-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); max-height: 320px; overflow-y: auto; mask-image: linear-gradient(#000 88%, transparent); }
-.log-list li {
-  font-size: var(--text-xs); padding: 8px 10px; border-radius: 6px;
-  background: var(--paper); border: 1px solid var(--rule);
-  display: flex; gap: 8px; align-items: baseline; overflow-wrap: anywhere; word-break: normal;
-}
-.log-time { color: var(--muted); flex-shrink: 0; white-space: nowrap; }
-.log-msg { color: var(--ink-2); }
-
-/* Theme toggle */
-.theme-btn {
-  background: none; border: 1px solid var(--rule); color: var(--ink-2);
-  border-radius: 999px; min-height: 36px; padding: 4px 14px;
-  font-size: var(--text-xs); cursor: pointer; font-family: var(--font);
-  transition: border-color var(--dur-2), color var(--dur-2);
-}
-.theme-btn:hover { border-color: var(--accent); color: var(--ink); }
-
-/* Section spacing */
-section { margin-top: var(--space-6); }
-section h1 { font-size: var(--text-xl); letter-spacing: -0.02em; margin-bottom: var(--space-4); }
-
-/* Toast */
-#toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: var(--paper-3); color: var(--ink); border: 1px solid var(--rule);
-  padding: 10px 18px; border-radius: 999px; font-size: var(--text-sm);
-  opacity: 0; pointer-events: none; transition: opacity var(--dur-2), transform var(--dur-2);
-  z-index: 50; max-width: 90vw;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-footer {
-  margin-top: var(--space-7); padding-top: var(--space-4);
-  border-top: 1px solid var(--rule); font-size: var(--text-2xs); color: var(--muted);
-  display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
-}
-
-@media (max-width: 768px) {
-  .col-3 { grid-column: span 6; }
-  .col-6 { grid-column: span 12; }
-  .grid { gap: var(--space-3); }
-}
-@media (max-width: 414px) {
-  .col-3 { grid-column: span 12; }
-  .wrap { padding: var(--space-4) var(--space-3) var(--space-6); }
-  .big { font-size: var(--text-xl); }
-  #oledGrid { grid-template-columns: repeat(2, 1fr) !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:clip}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);font-size:var(--text-base);line-height:1.55;min-height:100dvh;transition:background var(--dur-3) var(--ease-out),color var(--dur-3)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+::selection{background:var(--accent);color:var(--accent-ink)}
+.wrap{max-width:900px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-7)}
+header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) 0 var(--space-4);border-bottom:1px solid var(--rule);margin-bottom:var(--space-4)}
+.logo{font-size:var(--text-lg);font-weight:700;letter-spacing:-0.02em}.logo .dot{color:var(--accent)}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);padding:4px 10px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2)}
+.status-pill .led{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background var(--dur-2)}
+.status-pill.on .led{background:var(--good);box-shadow:0 0 6px var(--good)}.status-pill.off .led{background:var(--bad);box-shadow:0 0 6px var(--bad)}
+/* nav tabs */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-bottom:var(--space-5)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-2);font-family:var(--font);font-size:var(--text-xs);padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background var(--dur-2),color var(--dur-2),border-color var(--dur-2)}
+.tab.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.tab:hover{border-color:var(--accent);color:var(--ink)}
+.view{display:none}.view.active{display:block}
+.grid{display:grid;gap:var(--space-4);grid-template-columns:repeat(12,1fr)}
+.card{background:var(--paper-2);border:1px solid var(--rule);border-radius:var(--radius);padding:var(--space-4);min-width:0}
+.card h2{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:500;margin-bottom:var(--space-3)}
+.big{font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.03em}.big small{font-size:var(--text-sm);color:var(--muted);font-weight:400}
+.meta{font-size:var(--text-2xs);color:var(--muted);margin-top:var(--space-2)}
+.col-3{grid-column:span 3}.col-6{grid-column:span 6}.col-12{grid-column:span 12}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0}
+.toggle-row+.toggle-row{border-top:1px solid var(--rule)}
+.toggle-label{font-size:var(--text-sm)}.toggle-state{font-size:var(--text-xs);color:var(--muted);min-width:32px;text-align:right}
+.switch{position:relative;width:52px;height:30px;flex-shrink:0;appearance:none;background:var(--paper-3);border:1px solid var(--rule);border-radius:999px;cursor:pointer;transition:background var(--dur-2),border-color var(--dur-2)}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--ink-2);transition:transform var(--dur-2),background var(--dur-2)}
+.switch:checked{background:var(--accent);border-color:var(--accent)}.switch:checked::after{transform:translateX(22px);background:var(--accent-ink)}
+.switch:disabled{opacity:.4;cursor:not-allowed}
+input[type="text"],input[type="number"],input[type="password"],input[type="time"],textarea,.sel{width:100%;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;font-family:var(--font);font-size:16px;transition:border-color var(--dur-2)}
+input:focus,textarea:focus,.sel:focus{border-color:var(--accent);outline:none}
+textarea{resize:vertical;min-height:64px}
+.btn{appearance:none;border:none;cursor:pointer;border-radius:8px;background:var(--paper-3);color:var(--ink);font-family:var(--font);font-size:var(--text-sm);padding:10px 16px;min-height:44px;transition:transform var(--dur-1) var(--ease-out),background var(--dur-2)}
+.btn:active{transform:translateY(1px)}.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.log-list{list-style:none;display:flex;flex-direction:column;gap:var(--space-2);max-height:320px;overflow-y:auto}
+.log-list li{font-size:var(--text-xs);padding:8px 10px;border-radius:6px;background:var(--paper);border:1px solid var(--rule);display:flex;gap:8px;align-items:baseline;overflow-wrap:anywhere}
+.log-time{color:var(--muted);flex-shrink:0;white-space:nowrap}.log-msg{color:var(--ink-2)}
+/* schedule table */
+.sched-table{width:100%;border-collapse:collapse;font-size:var(--text-xs)}
+.sched-table th{font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:500;text-align:left;padding:8px;border-bottom:1px solid var(--rule)}
+.sched-table td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.sched-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:var(--text-2xs);border:1px solid var(--rule);color:var(--muted)}
+.badge.on{color:var(--good);border-color:var(--good)}.badge.off{color:var(--muted)}
+.theme-btn{background:none;border:1px solid var(--rule);color:var(--ink-2);border-radius:999px;min-height:36px;padding:4px 14px;font-size:var(--text-xs);cursor:pointer;font-family:var(--font)}
+.theme-btn:hover{border-color:var(--accent);color:var(--ink)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--paper-3);color:var(--ink);border:1px solid var(--rule);padding:10px 18px;border-radius:999px;font-size:var(--text-sm);opacity:0;pointer-events:none;transition:opacity var(--dur-2),transform var(--dur-2);z-index:50;max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+canvas{width:100%;height:180px;display:block}
+.chart-wrap{position:relative}
+.chart-meta{font-size:var(--text-2xs);color:var(--muted);display:flex;justify-content:space-between;margin-top:6px}
+footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid var(--rule);font-size:var(--text-2xs);color:var(--muted);display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
+@media(max-width:768px){.col-3{grid-column:span 6}.col-6{grid-column:span 12}}
+@media(max-width:414px){.col-3{grid-column:span 12}.wrap{padding:var(--space-4) var(--space-3) var(--space-6)}.big{font-size:var(--text-xl)}#oledGrid{grid-template-columns:repeat(2,1fr)!important}}
 </style>
 </head>
 <body>
 <div id="loginOverlay" style="position:fixed;inset:0;background:var(--paper);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
   <div style="font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em;">aqua.</div>
   <div style="color:var(--muted);font-size:var(--text-xs);">Masuk pake PIN 4 angka</div>
-  <input type="password" id="loginPin" inputmode="numeric" maxlength="4" pattern="[0-9]*"
-    placeholder="••••"
-    style="width:120px;text-align:center;font-size:24px;letter-spacing:12px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font-family:var(--font);">
+  <input type="password" id="loginPin" inputmode="numeric" maxlength="4" pattern="[0-9]*" placeholder="••••" style="width:120px;text-align:center;font-size:24px;letter-spacing:12px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font-family:var(--font);">
   <button class="btn primary" id="loginBtn" style="min-width:120px;">Masuk</button>
-  <div id="loginErr" style="color:var(--danger,#e5484d);font-size:var(--text-xs);display:none;">PIN salah, coba lagi</div>
+  <div id="loginErr" style="color:#e5484d;font-size:var(--text-xs);display:none;">PIN salah, coba lagi</div>
 </div>
 <div class="wrap">
   <header>
@@ -211,439 +98,290 @@ footer {
     </div>
   </header>
 
-  <div class="grid">
-    <div class="card col-3">
-      <h2>Suhu Air</h2>
-      <div class="big" id="temp">--.<span>°C</span></div>
-      <div class="meta" id="tempMeta">—</div>
-    </div>
-    <div class="card col-3">
-      <h2>Arus</h2>
-      <div class="big" id="current">--.<span>A</span></div>
-      <div class="meta" id="currentMeta">—</div>
-    </div>
-    <div class="card col-3">
-      <h2>Tegangan</h2>
-      <div class="big" id="voltage">--.<span>V</span></div>
-      <div class="meta" id="voltageMeta">—</div>
-    </div>
-    <div class="card col-3">
-      <h2>Daya</h2>
-      <div class="big" id="power">--.<span>W</span></div>
-      <div class="meta">V × A</div>
-    </div>
-  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="dash">Dashboard</button>
+    <button class="tab" data-view="jadwal">Jadwal</button>
+    <button class="tab" data-view="grafik">Grafik</button>
+    <button class="tab" data-view="settings">Settings</button>
+    <button class="tab" data-view="log">Log</button>
+  </nav>
 
-  <section>
-    <h1>Kontrol</h1>
+  <!-- DASHBOARD -->
+  <div class="view active" id="view-dash">
     <div class="grid">
+      <div class="card col-3"><h2>Suhu Air</h2><div class="big" id="temp">--.<span>°C</span></div><div class="meta" id="tempMeta">—</div></div>
+      <div class="card col-3"><h2>Arus</h2><div class="big" id="current">--.<span>A</span></div><div class="meta" id="currentMeta">—</div></div>
+      <div class="card col-3"><h2>Tegangan</h2><div class="big" id="voltage">--.<span>V</span></div><div class="meta" id="voltageMeta">—</div></div>
+      <div class="card col-3"><h2>Daya</h2><div class="big" id="power">--.<span>W</span></div><div class="meta">V × A · realtime</div></div>
+    </div>
+    <div class="grid" style="margin-top:var(--space-4)">
       <div class="card col-6">
         <h2>Relay</h2>
-        <div class="toggle-row">
-          <span class="toggle-label">Lampu 💡</span>
-          <span class="toggle-state" id="lampState">OFF</span>
-          <input type="checkbox" class="switch" id="lampSwitch" aria-label="Toggle lampu">
-        </div>
-        <div class="toggle-row">
-          <span class="toggle-label">Kipas 🌬️</span>
-          <span class="toggle-state" id="fanState">OFF</span>
-          <input type="checkbox" class="switch" id="fanSwitch" aria-label="Toggle kipas">
-        </div>
+        <div class="toggle-row"><span class="toggle-label">Lampu 💡</span><span class="toggle-state" id="lampState">OFF</span><input type="checkbox" class="switch" id="lampSwitch" aria-label="Toggle lampu"></div>
+        <div class="toggle-row"><span class="toggle-label">Kipas 🌬️</span><span class="toggle-state" id="fanState">OFF</span><input type="checkbox" class="switch" id="fanSwitch" aria-label="Toggle kipas"></div>
       </div>
       <div class="card col-6">
         <h2>OLED</h2>
         <textarea id="oledInput" placeholder="Teks buat OLED (mis. SUHU 28.5C LAMPU ON)" maxlength="128"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="btn primary" id="oledSend" style="flex:1;">Kirim ke OLED</button>
-        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;"><button class="btn primary" id="oledSend" style="flex:1;">Kirim ke OLED</button></div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section>
-    <h1>Log</h1>
-    <div class="card col-12" style="grid-column:span 12;">
-      <ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log — akses web & aksi tercatat di sini.</li></ul>
+  <!-- JADWAL -->
+  <div class="view" id="view-jadwal">
+    <div class="card">
+      <h2>Tambah Jadwal</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Relay
+          <select id="schedRelay" class="sel"><option value="lamp">Lampu 💡</option><option value="fan">Kipas 🌬️</option></select>
+        </label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Aksi
+          <select id="schedState" class="sel"><option value="on">ON</option><option value="off">OFF</option></select>
+        </label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Jam
+          <input type="time" id="schedTime" value="06:00" style="min-width:130px;">
+        </label>
+      </div>
+      <button class="btn primary" id="schedAdd" style="margin-top:10px;width:100%;">+ Tambah jadwal</button>
+      <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:6px;">Waktu Asia/Jakarta · via cron-job.org</p>
     </div>
-  </section>
+    <div class="card" style="margin-top:var(--space-4);padding:0;overflow:hidden;">
+      <div style="padding:var(--space-4) var(--space-4) 0;"><h2>Daftar Jadwal</h2></div>
+      <div style="overflow-x:auto;">
+        <table class="sched-table" id="schedTable">
+          <thead><tr><th>Relay</th><th>Aksi</th><th>Jam</th><th>Aktif</th><th></th></tr></thead>
+          <tbody id="schedBody"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-  <section>
-    <h1>Settings</h1>
-    <div class="card col-12" style="grid-column:span 12;">
+  <!-- GRAFIK -->
+  <div class="view" id="view-grafik">
+    <div class="grid">
+      <div class="card col-6">
+        <h2>Suhu Air (°C) — 20 menit terakhir</h2>
+        <div class="chart-wrap"><canvas id="chartTemp" width="800" height="180"></canvas></div>
+        <div class="chart-meta"><span id="tempMinMax">—</span><span id="tempNow">—</span></div>
+      </div>
+      <div class="card col-6">
+        <h2>Daya (W) — 20 menit terakhir</h2>
+        <div class="chart-wrap"><canvas id="chartPower" width="800" height="180"></canvas></div>
+        <div class="chart-meta"><span id="powerMinMax">—</span><span id="powerNow">—</span></div>
+      </div>
+    </div>
+    <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:8px;">Data sample tiap ~2 detik, simpan 600 titik terakhir · auto refresh 5 detik.</p>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="card">
       <h2>Isi OLED (line 1-4)</h2>
       <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;" id="oledGrid">
-        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1
-          <select id="setLine1" class="sel">
-            <option value="temp">Suhu</option>
-            <option value="current">Arus</option>
-            <option value="voltage">Tegangan</option>
-            <option value="relay">Status Relay</option>
-            <option value="text">Teks Custom</option>
-          </select>
-        </label>
-        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2
-          <select id="setLine2" class="sel">
-            <option value="temp">Suhu</option>
-            <option value="current">Arus</option>
-            <option value="voltage">Tegangan</option>
-            <option value="relay">Status Relay</option>
-            <option value="text">Teks Custom</option>
-          </select>
-        </label>
-        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3
-          <select id="setLine3" class="sel">
-            <option value="temp">Suhu</option>
-            <option value="current">Arus</option>
-            <option value="voltage">Tegangan</option>
-            <option value="relay">Status Relay</option>
-            <option value="text">Teks Custom</option>
-          </select>
-        </label>
-        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4
-          <select id="setLine4" class="sel">
-            <option value="temp">Suhu</option>
-            <option value="current">Arus</option>
-            <option value="voltage">Tegangan</option>
-            <option value="relay">Status Relay</option>
-            <option value="text">Teks Custom</option>
-          </select>
-        </label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1<select id="setLine1" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2<select id="setLine2" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3<select id="setLine3" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4<select id="setLine4" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="text">Teks Custom</option></select></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:6px;">Polling (detik)
-          <input type="number" id="setPoll" min="2" max="60" value="5" style="width:70px;">
-        </label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:6px;">Polling (detik)<input type="number" id="setPoll" min="2" max="60" value="5" style="width:70px;"></label>
         <button class="btn primary" id="saveSettings" style="margin-left:auto;">Simpan</button>
       </div>
       <div style="margin-top:12px;border-top:1px solid var(--rule);padding-top:12px;display:flex;gap:8px;align-items:center;">
         <label style="font-size:var(--text-xs);color:var(--muted);">Ganti PIN</label>
         <input type="password" id="setPin" inputmode="numeric" maxlength="4" placeholder="4 angka" style="width:90px;">
         <button class="btn" id="savePin">Simpan</button>
+        <button class="btn" id="logoutBtn" style="margin-left:auto;">Keluar</button>
       </div>
       <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
         <h2>Cron-job.org</h2>
-        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">
-          Ambil API key dari <a href="https://console.cron-job.org/settings" target="_blank" rel="noopener">console.cron-job.org → Settings</a>.
-          Dipakai bikin/aktifkan/hapus jadwal otomatis dari sini — gak perlu buka web cron-job.org lagi.
-        </p>
+        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Ambil API key dari <a href="https://console.cron-job.org/settings" target="_blank" rel="noopener">console.cron-job.org → Settings</a>.</p>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="setCronKey" placeholder="API key cron-job.org" style="flex:1;">
+          <input type="password" id="setCronKey" placeholder="API key cron-job.org" style="flex:1;">
           <button class="btn" id="saveCronKey">Simpan</button>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section>
-    <h1>Jadwal Otomatis</h1>
-    <div class="card col-12" style="grid-column:span 12;">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-        <select id="schedRelay" class="sel" style="flex:1;min-width:90px;">
-          <option value="lamp">Lampu 💡</option>
-          <option value="fan">Kipas 🌬️</option>
-        </select>
-        <select id="schedState" class="sel" style="flex:1;min-width:90px;">
-          <option value="on">ON</option>
-          <option value="off">OFF</option>
-        </select>
-        <input type="number" id="schedHour" min="0" max="23" placeholder="Jam" style="width:80px;">
-        <span style="color:var(--muted);">:</span>
-        <input type="number" id="schedMin" min="0" max="59" placeholder="Menit" style="width:80px;">
-        <button class="btn primary" id="schedAdd" style="flex:1;min-width:100px;">+ Tambah</button>
-      </div>
-      <ul class="log-list" id="schedList" style="max-height:260px;">
-        <li style="color:var(--muted);">Belum ada jadwal.</li>
-      </ul>
-    </div>
-  </section>
+  <!-- LOG -->
+  <div class="view" id="view-log">
+    <div class="card"><ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log.</li></ul></div>
+  </div>
 
-  <footer>
-    <span>aqua v0.1 · dev</span>
-    <span id="clock">—</span>
-  </footer>
+  <footer><span>aqua v0.1 · dev</span><span id="clock">—</span></footer>
 </div>
-
 <div id="toast" role="status"></div>
-
 <script>
 "use strict";
-const $ = (id) => document.getElementById(id);
-
-/* ── login ── */
-async function tryLogin(pin) {
-  const r = await fetch("/api/login", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({pin})
-  });
+const $=(id)=>document.getElementById(id);
+async function tryLogin(pin){
+  const r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin})});
   return r.ok;
 }
-$("loginBtn").addEventListener("click", async () => {
-  const pin = $("loginPin").value;
-  if (!/^[0-9]{4}$/.test(pin)) { return; }
-  const ok = await tryLogin(pin);
-  if (ok) {
-    $("loginOverlay").style.display = "none";
-    initApp();
-  } else {
-    $("loginErr").style.display = "block";
-    $("loginPin").value = "";
-  }
+$("loginBtn").addEventListener("click",async()=>{
+  const pin=$("loginPin").value;
+  if(!/^[0-9]{4}$/.test(pin))return;
+  const ok=await tryLogin(pin);
+  if(ok){$("loginOverlay").style.display="none";initApp();}
+  else{$("loginErr").style.display="block";$("loginPin").value="";}
 });
-$("loginPin").addEventListener("keydown", e => {
-  if (e.key === "Enter") $("loginBtn").click();
-});
-// auto-skip jika sudah login (cookie masih valid)
-(async () => {
-  const r = await fetch("/api/state");
-  if (r.ok) {
-    $("loginOverlay").style.display = "none";
-    initApp();
-  }
+$("loginPin").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
+(async()=>{
+  const r=await fetch("/api/state");
+  if(r.ok){$("loginOverlay").style.display="none";initApp();}
 })();
-
-/* ── app init (hanya jalan setelah login) ── */
-function initApp() {
-/* ── tema ── */
-const themeBtn = $("themeBtn");
-function applyTheme(t) {
-  document.documentElement.dataset.theme = t;
-  themeBtn.textContent = t === "dark" ? "☀" : "☾";
+function initApp(){
+const themeBtn=$("themeBtn");
+function applyTheme(t){document.documentElement.dataset.theme=t;themeBtn.textContent=t==="dark"?"☀":"☾"}
+let theme=localStorage.getItem("aqua-theme")||"dark";applyTheme(theme);
+themeBtn.addEventListener("click",()=>{theme=theme==="dark"?"light":"dark";localStorage.setItem("aqua-theme",theme);applyTheme(theme)});
+let toastTimer;function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2500)}
+function tick(){$("clock").textContent=new Date().toLocaleString("id-ID")}setInterval(tick,1000);tick();
+// tabs
+const tabs=document.querySelectorAll(".tab");
+function showView(name){
+  tabs.forEach(b=>b.classList.toggle("active",b.dataset.view===name));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));
+  location.hash=name;
+  if(name==="grafik")fetchHistory();
+  if(name==="log")fetchLogs();
+  if(name==="jadwal")loadSchedules();
 }
-let theme = localStorage.getItem("aqua-theme") || "dark";
-applyTheme(theme);
-themeBtn.addEventListener("click", () => {
-  theme = theme === "dark" ? "light" : "dark";
-  localStorage.setItem("aqua-theme", theme);
-  applyTheme(theme);
+tabs.forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+if(location.hash)showView(location.hash.slice(1));
+else showView("dash");
+async function fetchState(){
+  try{const r=await fetch("/api/state");if(r.status===401){$("loginOverlay").style.display="flex";return}
+    const s=await r.json();render(s);
+  }catch(e){$("statusPill").className="status-pill off";$("statusText").textContent="offline"}
+}
+function render(s){
+  const pill=$("statusPill");pill.className="status-pill "+(s.connected?"on":"off");
+  $("statusText").textContent=s.connected?"UNO terhubung":(s.mode==="mock"?"MODE MOCK":"UNO terputus");
+  $("temp").innerHTML=(s.temperature||0).toFixed(1)+'<span>°C</span>';
+  $("current").innerHTML=(s.current||0).toFixed(2)+'<span>A</span>';
+  $("voltage").innerHTML=(s.voltage||0).toFixed(2)+'<span>V</span>';
+  $("power").innerHTML=((s.voltage||0)*(s.current||0)).toFixed(1)+'<span>W</span>';
+  const up=new Date(s.updated_at*1000).toLocaleTimeString("id-ID");
+  $("tempMeta").textContent="update "+up;$("currentMeta").textContent="update "+up;$("voltageMeta").textContent="update "+up;
+  $("lampSwitch").checked=!!s.relay_lamp;$("fanSwitch").checked=!!s.relay_fan;
+  $("lampState").textContent=s.relay_lamp?"ON":"OFF";$("fanState").textContent=s.relay_fan?"ON":"OFF";
+}
+async function setRelay(which,on){
+  const r=await fetch("/api/relay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay:which,on})});
+  const d=await r.json();if(!r.ok){toast("Gagal: "+(d.error||r.status));return false}return true;
+}
+$("lampSwitch").addEventListener("change",async(e)=>{e.target.disabled=true;const ok=await setRelay("lamp",e.target.checked);if(!ok)e.target.checked=!e.target.checked;e.target.disabled=false});
+$("fanSwitch").addEventListener("change",async(e)=>{e.target.disabled=true;const ok=await setRelay("fan",e.target.checked);if(!ok)e.target.checked=!e.target.checked;e.target.disabled=false});
+$("oledSend").addEventListener("click",async()=>{
+  const text=$("oledInput").value.trim();if(!text){toast("Teks kosong");return}
+  const btn=$("oledSend");btn.disabled=true;
+  const r=await fetch("/api/oled",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+  const d=await r.json();btn.disabled=false;
+  if(r.ok){toast("Dikirim ke OLED ✓");$("oledInput").value=""}else toast("Gagal: "+(d.error||r.status));
 });
-
-/* ── toast ── */
-let toastTimer;
-function toast(msg) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2500);
+fetchState();setInterval(fetchState,5000);
+async function loadSettings(){
+  try{const r=await fetch("/api/settings/get");const s=await r.json();
+    $("setLine1").value=s.oled_line1;$("setLine2").value=s.oled_line2;$("setLine3").value=s.oled_line3;$("setLine4").value=s.oled_line4;$("setPoll").value=s.poll_interval;
+  }catch(e){}
 }
-
-/* ── clock ── */
-function tick() { $("clock").textContent = new Date().toLocaleString("id-ID"); }
-setInterval(tick, 1000); tick();
-
-/* ── status ── */
-async function fetchState() {
-  try {
-    const r = await fetch("/api/state");
-    const s = await r.json();
-    render(s);
-  } catch (e) {
-    $("statusPill").className = "status-pill off";
-    $("statusText").textContent = "offline";
-  }
-}
-
-function render(s) {
-  const pill = $("statusPill");
-  pill.className = "status-pill " + (s.connected ? "on" : "off");
-  $("statusText").textContent = s.connected ? "UNO terhubung" : (s.mode === "mock" ? "MODE MOCK" : "UNO terputus");
-
-  $("temp").innerHTML = (s.temperature || 0).toFixed(1) + '<span>°C</span>';
-  $("current").innerHTML = (s.current || 0).toFixed(2) + '<span>A</span>';
-  $("voltage").innerHTML = (s.voltage || 0).toFixed(2) + '<span>V</span>';
-  $("power").innerHTML = ((s.voltage||0) * (s.current||0)).toFixed(1) + '<span>W</span>';
-
-  const up = new Date(s.updated_at * 1000).toLocaleTimeString("id-ID");
-  $("tempMeta").textContent = "update " + up;
-  $("currentMeta").textContent = "update " + up;
-  $("voltageMeta").textContent = "update " + up;
-
-  $("lampSwitch").checked = !!s.relay_lamp;
-  $("fanSwitch").checked = !!s.relay_fan;
-  $("lampState").textContent = s.relay_lamp ? "ON" : "OFF";
-  $("fanState").textContent = s.relay_fan ? "ON" : "OFF";
-}
-
-/* ── relay ── */
-async function setRelay(which, on) {
-  const r = await fetch("/api/relay", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ relay: which, on })
-  });
-  const d = await r.json();
-  if (!r.ok) { toast("Gagal: " + (d.error || r.status)); return false; }
-  return true;
-}
-$("lampSwitch").addEventListener("change", async (e) => {
-  e.target.disabled = true;
-  const ok = await setRelay("lamp", e.target.checked);
-  if (!ok) { e.target.checked = !e.target.checked; }
-  e.target.disabled = false;
-});
-$("fanSwitch").addEventListener("change", async (e) => {
-  e.target.disabled = true;
-  const ok = await setRelay("fan", e.target.checked);
-  if (!ok) { e.target.checked = !e.target.checked; }
-  e.target.disabled = false;
-});
-
-/* ── oled ── */
-$("oledSend").addEventListener("click", async () => {
-  const text = $("oledInput").value.trim();
-  if (!text) { toast("Teks kosong"); return; }
-  const btn = $("oledSend");
-  btn.disabled = true;
-  const r = await fetch("/api/oled", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text })
-  });
-  const d = await r.json();
-  btn.disabled = false;
-  if (r.ok) { toast("Dikirim ke OLED ✓"); $("oledInput").value = ""; }
-  else toast("Gagal: " + (d.error || r.status));
-});
-
-/* ── poll ── */
-fetchState();
-setInterval(fetchState, 5000);
-
-/* ── settings ── */
-async function loadSettings() {
-  try {
-    const r = await fetch("/api/settings/get");
-    const s = await r.json();
-    $("setLine1").value = s.oled_line1;
-    $("setLine2").value = s.oled_line2;
-    $("setLine3").value = s.oled_line3;
-    $("setLine4").value = s.oled_line4;
-    $("setPoll").value = s.poll_interval;
-  } catch (e) { /* server belum siap */ }
-}
-$("saveSettings").addEventListener("click", async () => {
-  const btn = $("saveSettings");
-  btn.disabled = true;
-  const r = await fetch("/api/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      oled_line1: $("setLine1").value,
-      oled_line2: $("setLine2").value,
-      oled_line3: $("setLine3").value,
-      oled_line4: $("setLine4").value,
-      poll_interval: parseInt($("setPoll").value) || 5
-    })
-  });
-  btn.disabled = false;
-  if (r.ok) toast("Setting disimpan ✓");
-  else toast("Gagal simpan");
+$("saveSettings").addEventListener("click",async()=>{
+  const btn=$("saveSettings");btn.disabled=true;
+  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({oled_line1:$("setLine1").value,oled_line2:$("setLine2").value,oled_line3:$("setLine3").value,oled_line4:$("setLine4").value,poll_interval:parseInt($("setPoll").value)||5})});
+  btn.disabled=false;if(r.ok)toast("Setting disimpan ✓");else toast("Gagal simpan");
 });
 loadSettings();
-
-/* ── logs ── */
-async function fetchLogs() {
-  try {
-    const r = await fetch("/api/logs");
-    const logs = await r.json();
-    const ul = $("logList");
-    if (!logs.length) {
-      ul.innerHTML = '<li style="color:var(--muted);">Belum ada log.</li>';
-      return;
-    }
-    ul.innerHTML = logs.slice().reverse().map(l =>
-      `<li><span class="log-time">${l.time}</span><span class="log-msg">${l.ip} — ${l.action}</span></li>`
-    ).join("");
-  } catch (e) { /* ignore */ }
+async function fetchLogs(){
+  try{const r=await fetch("/api/logs");const logs=await r.json();const ul=$("logList");
+    if(!logs.length){ul.innerHTML='<li style="color:var(--muted);">Belum ada log.</li>';return}
+    ul.innerHTML=logs.slice().reverse().map(l=>`<li><span class="log-time">${l.time}</span><span class="log-msg">${l.ip} — ${l.action}</span></li>`).join("");
+  }catch(e){}
 }
-fetchLogs();
-setInterval(fetchLogs, 10000);
-
-/* ── cron key ── */
-$("saveCronKey").addEventListener("click", async () => {
-  const key = $("setCronKey").value.trim();
-  if (!key) { toast("Isi API key"); return; }
-  const r = await fetch("/api/settings", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({cron_api_key: key})
-  });
-  if (r.ok) toast("API key cron-job.org disimpan ✓");
-  else toast("Gagal simpan");
+fetchLogs();setInterval(fetchLogs,10000);
+$("saveCronKey").addEventListener("click",async()=>{
+  const key=$("setCronKey").value.trim();if(!key){toast("Isi API key");return}
+  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cron_api_key:key})});
+  if(r.ok)toast("API key disimpan ✓");else toast("Gagal simpan");
 });
-
-/* ── jadwal ── */
-async function loadSchedules() {
-  try {
-    const r = await fetch("/api/schedules");
-    const list = await r.json();
-    const ul = $("schedList");
-    if (!list.length) {
-      ul.innerHTML = '<li style="color:var(--muted);">Belum ada jadwal. Tambah di atas.</li>';
-      return;
-    }
-    ul.innerHTML = list.map(s => {
-      const t = s.relay === "lamp" ? "Lampu 💡" : "Kipas 🌬️";
-      const st = s.state === "on" ? "ON" : "OFF";
-      return `<li style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="flex:1;">${t} ${st} ${String(s.hour).padStart(2,"0")}:${String(s.minute).padStart(2,"0")}</span>
-        <span style="font-size:var(--text-2xs);color:var(--muted);">cron#${s.cron_job_id}</span>
-        <input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""}
-          onchange="toggleSched(${s.id}, this.checked)">
-        <button class="btn" style="padding:4px 10px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button>
-      </li>`;
+// jadwal — tabel
+async function loadSchedules(){
+  try{const r=await fetch("/api/schedules");const list=await r.json();const tb=$("schedBody");
+    if(!list.length){tb.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr>';return}
+    tb.innerHTML=list.map(s=>{
+      const t=s.relay==="lamp"?"Lampu 💡":"Kipas 🌬️";
+      const st=s.state==="on"?"ON":"OFF";
+      const badge=s.state==="on"?"on":"off";
+      const hm=String(s.hour).padStart(2,"0")+":"+String(s.minute).padStart(2,"0");
+      return `<tr><td>${t}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td><button class="btn" style="padding:4px 10px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
     }).join("");
-  } catch (e) { /* ignore */ }
+  }catch(e){}
 }
-async function toggleSched(id, on) {
-  await fetch("/api/schedule/" + id + "/toggle", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({enabled: on})
-  });
+window.toggleSched=async(id,on)=>{
+  await fetch("/api/schedule/"+id+"/toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:on})});
   loadSchedules();
-}
-async function deleteSched(id) {
-  await fetch("/api/schedule/" + id, {method: "DELETE"});
-  loadSchedules();
-}
-$("schedAdd").addEventListener("click", async () => {
-  const relay = $("schedRelay").value;
-  const state = $("schedState").value;
-  const hour = parseInt($("schedHour").value) || 0;
-  const min = parseInt($("schedMin").value) || 0;
-  const r = await fetch("/api/schedule", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({relay, state, hour, minute: min})
-  });
-  const d = await r.json();
-  if (r.ok) {
-    toast("Jadwal ditambahkan ✓");
-    $("schedHour").value = "";
-    $("schedMin").value = "";
-    loadSchedules();
-  } else {
-    toast("Gagal: " + (d.error || r.status));
-  }
+};
+window.deleteSched=async(id)=>{
+  await fetch("/api/schedule/"+id,{method:"DELETE"});loadSchedules();
+};
+$("schedAdd").addEventListener("click",async()=>{
+  const relay=$("schedRelay").value,state=$("schedState").value;
+  const tv=$("schedTime").value||"06:00";const [h,m]=tv.split(":").map(Number);
+  const r=await fetch("/api/schedule",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay,state,hour:h,minute:m})});
+  const d=await r.json();
+  if(r.ok){toast("Jadwal ditambahkan ✓");loadSchedules();}else toast("Gagal: "+(d.error||r.status));
 });
-loadSchedules();
-setInterval(loadSchedules, 15000);
-
-/* ── ganti PIN ── */
-$("savePin").addEventListener("click", async () => {
-  const pin = $("setPin").value.trim();
-  if (!/^[0-9]{4}$/.test(pin)) { toast("PIN harus 4 angka"); return; }
-  const r = await fetch("/api/pin", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({pin})
-  });
-  const d = await r.json().catch(()=>({}));
-  if (r.ok) { toast("PIN diganti ✓"); $("setPin").value=""; }
-  else toast("Gagal: " + (d.error || r.status));
+loadSchedules();setInterval(loadSchedules,15000);
+$("savePin").addEventListener("click",async()=>{
+  const pin=$("setPin").value.trim();if(!/^[0-9]{4}$/.test(pin)){toast("PIN harus 4 angka");return}
+  const r=await fetch("/api/pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin})});
+  const d=await r.json().catch(()=>({}));if(r.ok){toast("PIN diganti ✓");$("setPin").value=""}else toast("Gagal: "+(d.error||r.status));
 });
+$("logoutBtn").addEventListener("click",async()=>{await fetch("/api/logout",{method:"POST"});location.reload()});
+// chart — native canvas, no lib
+function drawChart(canvas, vals, color){
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height,pad=12;
+  ctx.clearRect(0,0,W,H);
+  if(!vals.length){ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--muted");ctx.font="12px JetBrains Mono";ctx.fillText("Belum ada data",12,H/2);return}
+  let min=Math.min(...vals),max=Math.max(...vals);
+  if(min===max){min-=0.5;max+=0.5}
+  const pr=(max-min)*0.08;min-=pr;max+=pr;
+  const range=max-min;
+  // grid
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--rule");
+  ctx.lineWidth=1;ctx.globalAlpha=.5;
+  for(let i=0;i<=3;i++){const y=pad+(H-pad*2)*i/3;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke()}
+  ctx.globalAlpha=1;
+  // line
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin="round";ctx.beginPath();
+  vals.forEach((v,i)=>{
+    const x=pad+(W-pad*2)*i/Math.max(1,vals.length-1);
+    const y=pad+(H-pad*2)*(1-(v-min)/range);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // fill
+  ctx.lineTo(pad+(W-pad*2),H-pad);ctx.lineTo(pad,H-pad);ctx.closePath();ctx.globalAlpha=.12;ctx.fillStyle=color;ctx.fill();ctx.globalAlpha=1;
+  return {min,max};
+}
+async function fetchHistory(){
+  try{const r=await fetch("/api/history");if(!r.ok)return;const data=await r.json();
+    const temps=data.map(p=>p.temp),powers=data.map(p=>p.power);
+    const accent=getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()||"oklch(72% 0.13 200)";
+    const good=getComputedStyle(document.documentElement).getPropertyValue("--good").trim()||"oklch(72% 0.15 145)";
+    const rt=drawChart($("chartTemp"),temps,accent);
+    const rp=drawChart($("chartPower"),powers,good);
+    if(rt){$("tempMinMax").textContent=`min ${rt.min.toFixed(1)} · max ${rt.max.toFixed(1)} °C`;$("tempNow").textContent=data.length?temps[temps.length-1].toFixed(1)+" °C":"—"}
+    if(rp){$("powerMinMax").textContent=`min ${rp.min.toFixed(1)} · max ${rp.max.toFixed(1)} W`;$("powerNow").textContent=data.length?powers[powers.length-1].toFixed(1)+" W":"—"}
+  }catch(e){}
+}
+fetchHistory();setInterval(fetchHistory,5000);
 } // end initApp
 </script>
 </body>

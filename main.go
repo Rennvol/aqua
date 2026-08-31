@@ -46,6 +46,7 @@ func main() {
 	mux.HandleFunc("/api/schedule/{id}/toggle", authMW(handleScheduleToggle))
 	mux.HandleFunc("/api/schedule/{id}", authMW(handleScheduleDelete))
 	mux.HandleFunc("/api/pin", authMW(handleChangePin))
+	mux.HandleFunc("/api/history", authMW(handleHistory))
 
 	go RunSerial()
 	ensureToken()
