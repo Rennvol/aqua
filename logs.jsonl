@@ -1,0 +1,15 @@
+{"time":"2026-08-31 18:50:14","ip":"[::1]","action":"relay lampu: ON"}
+{"time":"2026-08-31 18:50:14","ip":"[::1]","action":"relay kipas: OFF"}
+{"time":"2026-08-31 18:50:14","ip":"[::1]","action":"oled: SUHU 28C LAMPU ON"}
+{"time":"2026-08-31 18:50:14","ip":"[::1]","action":"settings: update"}
+{"time":"2026-08-31 18:50:23","ip":"182.8.255.173","action":"akses web"}
+{"time":"2026-08-31 18:50:31","ip":"[::1]","action":"akses web"}
+{"time":"2026-08-31 18:50:33","ip":"[::1]","action":"relay lampu: OFF"}
+{"time":"2026-08-31 18:50:34","ip":"[::1]","action":"oled: HALO AQUARIUM"}
+{"time":"2026-08-31 18:50:49","ip":"182.8.255.173","action":"relay lampu: ON"}
+{"time":"2026-08-31 18:50:51","ip":"182.8.255.173","action":"relay lampu: OFF"}
+{"time":"2026-08-31 18:51:49","ip":"182.8.255.173","action":"akses web"}
+{"time":"2026-08-31 18:52:01","ip":"182.8.255.173","action":"relay lampu: ON"}
+{"time":"2026-08-31 18:52:04","ip":"182.8.255.173","action":"relay lampu: OFF"}
+{"time":"2026-08-31 18:52:09","ip":"[::1]","action":"akses web"}
+{"time":"2026-08-31 18:52:17","ip":"182.8.255.173","action":"akses web"}

@@ -115,13 +115,13 @@ header {
 .switch:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Input */
-input[type="text"], textarea {
+input[type="text"], textarea, .sel {
   width: 100%; background: var(--paper); color: var(--ink);
   border: 1px solid var(--rule); border-radius: 8px;
   padding: 10px 12px; font-family: var(--font); font-size: 16px;
   transition: border-color var(--dur-2);
 }
-input[type="text"]:focus, textarea:focus { border-color: var(--accent); outline: none; }
+input[type="text"]:focus, textarea:focus, .sel:focus { border-color: var(--accent); outline: none; }
 textarea { resize: vertical; min-height: 64px; }
 
 /* Buttons */
@@ -138,13 +138,13 @@ textarea { resize: vertical; min-height: 64px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Logs */
-.log-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); max-height: 320px; overflow-y: auto; }
+.log-list { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); max-height: 320px; overflow-y: auto; mask-image: linear-gradient(#000 88%, transparent); }
 .log-list li {
   font-size: var(--text-xs); padding: 8px 10px; border-radius: 6px;
   background: var(--paper); border: 1px solid var(--rule);
-  display: flex; gap: 8px; align-items: baseline; word-break: break-all;
+  display: flex; gap: 8px; align-items: baseline; overflow-wrap: anywhere; word-break: normal;
 }
-.log-time { color: var(--muted); flex-shrink: 0; }
+.log-time { color: var(--muted); flex-shrink: 0; white-space: nowrap; }
 .log-msg { color: var(--ink-2); }
 
 /* Theme toggle */
@@ -185,6 +185,7 @@ footer {
   .col-3 { grid-column: span 12; }
   .wrap { padding: var(--space-4) var(--space-3) var(--space-6); }
   .big { font-size: var(--text-xl); }
+  #oledGrid { grid-template-columns: repeat(2, 1fr) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -254,6 +255,57 @@ footer {
     <h1>Log</h1>
     <div class="card col-12" style="grid-column:span 12;">
       <ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log — akses web & aksi tercatat di sini.</li></ul>
+    </div>
+  </section>
+
+  <section>
+    <h1>Settings</h1>
+    <div class="card col-12" style="grid-column:span 12;">
+      <h2>Isi OLED (line 1-4)</h2>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;" id="oledGrid">
+        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1
+          <select id="setLine1" class="sel">
+            <option value="temp">Suhu</option>
+            <option value="current">Arus</option>
+            <option value="voltage">Tegangan</option>
+            <option value="relay">Status Relay</option>
+            <option value="text">Teks Custom</option>
+          </select>
+        </label>
+        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2
+          <select id="setLine2" class="sel">
+            <option value="temp">Suhu</option>
+            <option value="current">Arus</option>
+            <option value="voltage">Tegangan</option>
+            <option value="relay">Status Relay</option>
+            <option value="text">Teks Custom</option>
+          </select>
+        </label>
+        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3
+          <select id="setLine3" class="sel">
+            <option value="temp">Suhu</option>
+            <option value="current">Arus</option>
+            <option value="voltage">Tegangan</option>
+            <option value="relay">Status Relay</option>
+            <option value="text">Teks Custom</option>
+          </select>
+        </label>
+        <label class="col" style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4
+          <select id="setLine4" class="sel">
+            <option value="temp">Suhu</option>
+            <option value="current">Arus</option>
+            <option value="voltage">Tegangan</option>
+            <option value="relay">Status Relay</option>
+            <option value="text">Teks Custom</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:6px;">Polling (detik)
+          <input type="number" id="setPoll" min="2" max="60" value="5" style="width:70px;">
+        </label>
+        <button class="btn primary" id="saveSettings" style="margin-left:auto;">Simpan</button>
+      </div>
     </div>
   </section>
 
@@ -374,6 +426,56 @@ $("oledSend").addEventListener("click", async () => {
 /* ── poll ── */
 fetchState();
 setInterval(fetchState, 5000);
+
+/* ── settings ── */
+async function loadSettings() {
+  try {
+    const r = await fetch("/api/settings/get");
+    const s = await r.json();
+    $("setLine1").value = s.oled_line1;
+    $("setLine2").value = s.oled_line2;
+    $("setLine3").value = s.oled_line3;
+    $("setLine4").value = s.oled_line4;
+    $("setPoll").value = s.poll_interval;
+  } catch (e) { /* server belum siap */ }
+}
+$("saveSettings").addEventListener("click", async () => {
+  const btn = $("saveSettings");
+  btn.disabled = true;
+  const r = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      oled_line1: $("setLine1").value,
+      oled_line2: $("setLine2").value,
+      oled_line3: $("setLine3").value,
+      oled_line4: $("setLine4").value,
+      poll_interval: parseInt($("setPoll").value) || 5
+    })
+  });
+  btn.disabled = false;
+  if (r.ok) toast("Setting disimpan ✓");
+  else toast("Gagal simpan");
+});
+loadSettings();
+
+/* ── logs ── */
+async function fetchLogs() {
+  try {
+    const r = await fetch("/api/logs");
+    const logs = await r.json();
+    const ul = $("logList");
+    if (!logs.length) {
+      ul.innerHTML = '<li style="color:var(--muted);">Belum ada log.</li>';
+      return;
+    }
+    ul.innerHTML = logs.slice().reverse().map(l =>
+      `<li><span class="log-time">${l.time}</span><span class="log-msg">${l.ip} — ${l.action}</span></li>`
+    ).join("");
+  } catch (e) { /* ignore */ }
+}
+fetchLogs();
+setInterval(fetchLogs, 10000);
 </script>
 </body>
 </html>
