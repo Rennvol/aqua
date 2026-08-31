@@ -6,7 +6,7 @@
   "oled_line4": "text",
   "poll_interval": 3,
   "cron_api_key": "",
-  "cron_token": "77fe83041ccf776a1907d89b59d41ade",
+  "cron_token": "ganti-otomatis-pas-first-run",
   "public_url": "http://localhost:30221",
   "schedules": []
 }
