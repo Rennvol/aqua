@@ -1,0 +1,10 @@
+{
+  "apps": [{
+    "name": "aqua",
+    "script": "./bin/aqua",
+    "cwd": "/home/ubuntu/aqua",
+    "env": { "PORT": "30221" },
+    "autorestart": true,
+    "max_memory_restart": "100M"
+  }]
+}
