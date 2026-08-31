@@ -75,6 +75,11 @@ textarea{resize:vertical;min-height:64px}
 .theme-btn:hover{border-color:var(--accent);color:var(--ink)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--paper-3);color:var(--ink);border:1px solid var(--rule);padding:10px 18px;border-radius:999px;font-size:var(--text-sm);opacity:0;pointer-events:none;transition:opacity var(--dur-2),transform var(--dur-2);z-index:50;max-width:90vw}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.icon-pick{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;padding:8px;grid-template-columns:repeat(5,1fr);gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:20;min-width:220px}
+.icon-pick.open{display:grid}
+.icon-pick button{appearance:none;border:1px solid var(--rule);background:var(--paper);border-radius:8px;width:36px;height:36px;font-size:18px;cursor:pointer}
+.icon-pick button:hover{border-color:var(--accent)}
+.icon-pick button.sel{border-color:var(--accent);background:var(--accent);}
 canvas{width:100%;height:180px;display:block}
 .chart-wrap{position:relative}
 .chart-meta{font-size:var(--text-2xs);color:var(--muted);display:flex;justify-content:space-between;margin-top:6px}
@@ -217,7 +222,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <div style="display:flex;gap:8px;">
           <input type="text" id="newRelayId" placeholder="id (pompa)" style="flex:1;">
           <input type="text" id="newRelayLabel" placeholder="Label (Pompa Air)" style="flex:1;">
-          <input type="text" id="newRelayIcon" placeholder="Icon 💧" style="width:70px;">
+          <div style="position:relative">
+            <input type="hidden" id="newRelayIcon" value="">
+            <button class="sel" id="relayIconBtn" type="button" style="width:70px;min-height:44px;">Icon ▾</button>
+            <div class="icon-pick" id="relayIconPick"></div>
+          </div>
           <button class="btn" id="addRelayBtn">+ Tambah</button>
         </div>
       </div>
@@ -229,7 +238,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <input type="text" id="newSensorId" placeholder="id (ph)" style="flex:1;min-width:90px;">
           <input type="text" id="newSensorLabel" placeholder="Label (pH Air)" style="flex:1;min-width:120px;">
           <input type="text" id="newSensorUnit" placeholder="Unit (pH)" style="width:80px;">
-          <input type="text" id="newSensorIcon" placeholder="Icon 🧪" style="width:70px;">
+          <div style="position:relative">
+            <input type="hidden" id="newSensorIcon" value="">
+            <button class="sel" id="sensorIconBtn" type="button" style="width:70px;min-height:44px;">Icon ▾</button>
+            <div class="icon-pick" id="sensorIconPick"></div>
+          </div>
           <button class="btn" id="addSensorBtn">+ Tambah</button>
         </div>
       </div>
@@ -405,6 +418,29 @@ $("saveSettings").addEventListener("click",async()=>{
   const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({oled_line1:$("setLine1").value,oled_line2:$("setLine2").value,oled_line3:$("setLine3").value,oled_line4:$("setLine4").value,poll_interval:parseInt($("setPoll").value)||5})});
   btn.disabled=false;if(r.ok)toast("Setting disimpan ✓");else toast("Gagal simpan");
 });
+
+// icon picker
+const RELAY_ICONS=["💡","🌬️","💧","🔌","⚡","🔥","❄️","🌱","🐟","💦","🚿","🌀","🔔","💨","☀️","🌙","🔊","📡","⚙️","🎯"];
+const SENSOR_ICONS=["🌡️","⚡","🔌","🔋","🧪","💧","🌱","🐟","💦","🌫️","☀️","🌙","📟","🧬","💨","🔬","📡","🌊","🍃","🧫"];
+function setupPicker(btnId,pickId,inputId,icons){
+  const btn=$(btnId), pick=$(pickId), inp=$(inputId);
+  if(!btn||!pick) return;
+  pick.innerHTML=icons.map(ic=>`<button type="button" data-ic="${ic}">${ic}</button>`).join("");
+  pick.querySelectorAll("button").forEach(b=>{
+    b.addEventListener("click",()=>{
+      inp.value=b.dataset.ic;
+      btn.textContent=b.dataset.ic+" ▾";
+      pick.classList.remove("open");
+      pick.querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel");
+    });
+  });
+  btn.addEventListener("click",()=>pick.classList.toggle("open"));
+  document.addEventListener("click",(e)=>{ if(!btn.contains(e.target)&&!pick.contains(e.target)) pick.classList.remove("open"); });
+}
+setupPicker("relayIconBtn","relayIconPick","newRelayIcon",RELAY_ICONS);
+setupPicker("sensorIconBtn","sensorIconPick","newSensorIcon",SENSOR_ICONS);
+
 loadSettings();
 refreshDefs(); // load relays/sensors + build UI
 // hook tambah relay/sensor
@@ -416,7 +452,7 @@ $("addRelayBtn")?.addEventListener("click", async()=>{
   if(!/^[a-z0-9_-]+$/.test(id)){toast("ID hanya a-z 0-9 _ -"); return}
   const r=await fetch("/api/relays",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,label,icon})});
   const d=await r.json().catch(()=>({}));
-  if(r.ok){toast("Relay ditambahkan ✓"); $("newRelayId").value="";$("newRelayLabel").value="";$("newRelayIcon").value=""; _oledOptsBuilt=false; await refreshDefs(); fetchState();}
+  if(r.ok){toast("Relay ditambahkan ✓"); $("newRelayId").value="";$("newRelayLabel").value="";$("newRelayIcon").value="";$("relayIconBtn").textContent="Icon ▾";$("relayIconPick").classList.remove("open"); _oledOptsBuilt=false; await refreshDefs(); fetchState();}
   else toast("Gagal: "+(d.error||r.status));
 });
 $("addSensorBtn")?.addEventListener("click", async()=>{
@@ -428,7 +464,7 @@ $("addSensorBtn")?.addEventListener("click", async()=>{
   if(!/^[a-z0-9_-]+$/.test(id)){toast("ID hanya a-z 0-9 _ -"); return}
   const r=await fetch("/api/sensors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,label,unit,icon})});
   const d=await r.json().catch(()=>({}));
-  if(r.ok){toast("Sensor ditambahkan ✓"); $("newSensorId").value="";$("newSensorLabel").value="";$("newSensorUnit").value="";$("newSensorIcon").value=""; _oledOptsBuilt=false; await refreshDefs(); fetchState();}
+  if(r.ok){toast("Sensor ditambahkan ✓"); $("newSensorId").value="";$("newSensorLabel").value="";$("newSensorUnit").value="";$("newSensorIcon").value="";$("sensorIconBtn").textContent="Icon ▾";$("sensorIconPick").classList.remove("open"); _oledOptsBuilt=false; await refreshDefs(); fetchState();}
   else toast("Gagal: "+(d.error||r.status));
 });
 
