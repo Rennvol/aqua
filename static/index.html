@@ -259,7 +259,18 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
 
   <!-- LOG -->
   <div class="view" id="view-log">
-    <div class="card"><ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log.</li></ul></div>
+    <div class="card">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="logFilters">
+        <button class="tab active" data-f="all">Semua</button>
+        <button class="tab" data-f="akses">Akses web</button>
+        <button class="tab" data-f="relay">Relay</button>
+        <button class="tab" data-f="jadwal">Jadwal</button>
+        <button class="tab" data-f="sensor">Sensor</button>
+        <button class="tab" data-f="oled">OLED</button>
+        <button class="tab" data-f="auto">Auto cron</button>
+      </div>
+      <ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log.</li></ul>
+    </div>
   </div>
 
   <footer><span>santra v0.1 · dev</span><span id="clock">—</span></footer>
@@ -469,11 +480,31 @@ $("addSensorBtn")?.addEventListener("click", async()=>{
 });
 
 async function fetchLogs(){
-  try{const r=await fetch("/api/logs");const logs=await r.json();const ul=$("logList");
-    if(!logs.length){ul.innerHTML='<li style="color:var(--muted);">Belum ada log.</li>';return}
+  try{
+    const r=await fetch("/api/logs"); const all=await r.json();
+    const f=document.querySelector("#logFilters .tab.active")?.dataset.f || "all";
+    const logs = f==="all" ? all : all.filter(l=>{
+      const a=(l.action||"").toLowerCase();
+      if(f==="akses") return a.includes("akses");
+      if(f==="relay") return a.startsWith("relay");
+      if(f==="jadwal") return a.startsWith("jadwal");
+      if(f==="sensor") return a.startsWith("sensor");
+      if(f==="oled") return a.startsWith("oled");
+      if(f==="auto") return a.startsWith("auto");
+      return true;
+    });
+    const ul=$("logList");
+    if(!logs.length){ul.innerHTML='<li style="color:var(--muted);">Tidak ada log untuk filter ini.</li>';return}
     ul.innerHTML=logs.slice().reverse().map(l=>`<li><span class="log-time">${l.time}</span><span class="log-msg">${l.ip} — ${l.action}</span></li>`).join("");
   }catch(e){}
 }
+document.querySelectorAll("#logFilters .tab").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll("#logFilters .tab").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    fetchLogs();
+  });
+});
 fetchLogs();setInterval(fetchLogs,10000);
 $("saveCronKey").addEventListener("click",async()=>{
   const key=$("setCronKey").value.trim();if(!key){toast("Isi API key");return}
