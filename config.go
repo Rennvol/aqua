@@ -136,6 +136,8 @@ func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		"oled_line3":    settings.OLEDLine3,
 		"oled_line4":    settings.OLEDLine4,
 		"poll_interval": settings.PollInterval,
+		"public_url":    settings.PublicURL,
+		"cron_token":    settings.CronToken,
 		"relays":        settings.Relays,
 		"sensors":       settings.Sensors,
 	})
@@ -147,35 +149,39 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		OLEDLine1    string `json:"oled_line1"`
-		OLEDLine2    string `json:"oled_line2"`
-		OLEDLine3    string `json:"oled_line3"`
-		OLEDLine4    string `json:"oled_line4"`
-		PollInterval int    `json:"poll_interval"`
-		CronAPIKey   string `json:"cron_api_key"`
+		OLEDLine1    *string `json:"oled_line1"`
+		OLEDLine2    *string `json:"oled_line2"`
+		OLEDLine3    *string `json:"oled_line3"`
+		OLEDLine4    *string `json:"oled_line4"`
+		PollInterval *int    `json:"poll_interval"`
+		CronAPIKey   *string `json:"cron_api_key"`
+		PublicURL    *string `json:"public_url"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"bad json"}`, 400)
 		return
 	}
 	settings.mu.Lock()
-	if req.OLEDLine1 != "" {
-		settings.OLEDLine1 = req.OLEDLine1
+	if req.OLEDLine1 != nil {
+		settings.OLEDLine1 = *req.OLEDLine1
 	}
-	if req.OLEDLine2 != "" {
-		settings.OLEDLine2 = req.OLEDLine2
+	if req.OLEDLine2 != nil {
+		settings.OLEDLine2 = *req.OLEDLine2
 	}
-	if req.OLEDLine3 != "" {
-		settings.OLEDLine3 = req.OLEDLine3
+	if req.OLEDLine3 != nil {
+		settings.OLEDLine3 = *req.OLEDLine3
 	}
-	if req.OLEDLine4 != "" {
-		settings.OLEDLine4 = req.OLEDLine4
+	if req.OLEDLine4 != nil {
+		settings.OLEDLine4 = *req.OLEDLine4
 	}
-	if req.PollInterval > 0 {
-		settings.PollInterval = req.PollInterval
+	if req.PollInterval != nil && *req.PollInterval > 0 {
+		settings.PollInterval = *req.PollInterval
 	}
-	if req.CronAPIKey != "" {
-		settings.CronAPIKey = req.CronAPIKey
+	if req.CronAPIKey != nil {
+		settings.CronAPIKey = *req.CronAPIKey
+	}
+	if req.PublicURL != nil {
+		settings.PublicURL = *req.PublicURL
 	}
 	settings.mu.Unlock()
 	saveSettings(settings)

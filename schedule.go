@@ -22,6 +22,7 @@ type Schedule struct {
 	Minute    int    `json:"minute"`    // 0-59
 	Enabled   bool   `json:"enabled"`
 	CronJobID int    `json:"cron_job_id"` // jobId dari cron-job.org
+	HitCount  int    `json:"hit_count"`   // incremented on each cron hit
 }
 
 var cronAPIBase = "https://api.cron-job.org"
@@ -91,7 +92,7 @@ func jobPayload(s *Schedule) map[string]interface{} {
 		"job": map[string]interface{}{
 			"url":            cronURL(s.Relay, s.State),
 			"enabled":        enabled,
-			"title":          fmt.Sprintf("aqua %s %s", s.Relay, s.State),
+			"title":          fmt.Sprintf("santra %s %s", s.Relay, s.State),
 			"saveResponses":  false,
 			"requestTimeout": 30,
 			"schedule": map[string]interface{}{
@@ -155,7 +156,7 @@ func deleteScheduleRemote(s *Schedule) error {
 func dbSchedUpsert(s *Schedule) {
 	if db == nil { return }
 	en := 0; if s.Enabled { en = 1 }
-	db.Exec(`INSERT INTO schedules(id,relay,state,hour,minute,enabled,cron_job_id) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET relay=excluded.relay, state=excluded.state, hour=excluded.hour, minute=excluded.minute, enabled=excluded.enabled, cron_job_id=excluded.cron_job_id`, s.ID, s.Relay, s.State, s.Hour, s.Minute, en, s.CronJobID)
+	db.Exec(`INSERT INTO schedules(id,relay,state,hour,minute,enabled,cron_job_id,hit_count) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET relay=excluded.relay, state=excluded.state, hour=excluded.hour, minute=excluded.minute, enabled=excluded.enabled, cron_job_id=excluded.cron_job_id, hit_count=excluded.hit_count`, s.ID, s.Relay, s.State, s.Hour, s.Minute, en, s.CronJobID, s.HitCount)
 }
 func dbSchedDelete(id int) { if db != nil { db.Exec(`DELETE FROM schedules WHERE id=?`, id) } }
 
@@ -220,13 +221,27 @@ func handleScheduleAdd(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	req.ID = maxID + 1
-	// derive public base URL from this request (scheme + host)
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
+	// derive public base URL from request host (auto domain)
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		scheme = "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		if r.Header.Get("X-Forwarded-Host") != "" {
+			scheme = "https"
+		}
 	}
-	if settings.PublicURL == "" && r.Host != "" {
-		settings.PublicURL = scheme + "://" + r.Host
+	host := r.Header.Get("X-Forwarded-Host")
+	if host == "" { host = r.Host }
+	// update PublicURL if still default localhost or empty, and host is not localhost
+	isLocalHost := func(h string) bool { return h == "" || h == "localhost:30221" || h == "127.0.0.1:30221" || h == "localhost" || h == "127.0.0.1" }
+	if host != "" && !isLocalHost(host) {
+		if isLocalHost(settings.PublicURL) || settings.PublicURL == "" {
+			settings.PublicURL = scheme + "://" + host
+		}
+	} else if settings.PublicURL == "" && host != "" {
+		settings.PublicURL = scheme + "://" + host
 	}
 	settings.Schedules = append(settings.Schedules, req)
 	dbSchedUpsert(&req)
@@ -456,6 +471,16 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 
 	st.setRelay(relay, state == "on")
 	label := relayLabel(relay)
+	// increment hit_count for matching schedule(s) — best effort: find enabled schedule with same relay+state and bump
+	settings.mu.Lock()
+	for i := range settings.Schedules {
+		if settings.Schedules[i].Relay == relay && settings.Schedules[i].State == state {
+			settings.Schedules[i].HitCount++
+			dbSchedUpsert(&settings.Schedules[i])
+		}
+	}
+	settings.mu.Unlock()
+	saveSettings(settings)
 	addLog(realIP(r), fmt.Sprintf("auto cron %s: %s", label, strings.ToUpper(state)))
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "relay": relay, "on": state})
 }

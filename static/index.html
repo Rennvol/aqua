@@ -171,11 +171,12 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
       <div style="padding:var(--space-4) var(--space-4) 0;"><h2>Daftar Jadwal</h2></div>
       <div style="overflow-x:auto;">
         <table class="sched-table" id="schedTable">
-          <thead><tr><th>Relay</th><th>Aksi</th><th>Jam</th><th>Aktif</th><th></th></tr></thead>
-          <tbody id="schedBody"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr></tbody>
+          <thead><tr><th>Relay</th><th>Aksi</th><th>Jam</th><th>Aktif</th><th>Hit</th><th></th></tr></thead>
+          <tbody id="schedBody"><tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr></tbody>
         </table>
       </div>
     </div>
+    <div id="cronDomainInfo" style="margin-top:10px;padding:10px 12px;border:1px dashed var(--rule);border-radius:8px;background:var(--paper);font-size:var(--text-xs);line-height:1.6;color:var(--muted);">memuat domain...</div>
   </div>
 
   <!-- GRAFIK -->
@@ -253,6 +254,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <input type="password" id="setCronKey" placeholder="API key cron-job.org" style="flex:1;">
           <button class="btn" id="saveCronKey">Simpan</button>
         </div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+          <input type="text" id="setPublicUrl" placeholder="Domain publik (https://santra.example.com)" style="flex:1;">
+          <button class="btn" id="savePublicUrl">Simpan domain</button>
+        </div>
+        <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:6px;">Kosongkan = auto dari domain yang diakses. Cron hit URL: <code id="cronSampleUrl" style="word-break:break-all;">—</code></p>
       </div>
     </div>
   </div>
@@ -302,17 +308,17 @@ let theme=localStorage.getItem("aqua-theme")||"dark";applyTheme(theme);
 themeBtn.addEventListener("click",()=>{theme=theme==="dark"?"light":"dark";localStorage.setItem("aqua-theme",theme);applyTheme(theme)});
 let toastTimer;function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2500)}
 function tick(){$("clock").textContent=new Date().toLocaleString("id-ID")}setInterval(tick,1000);tick();
-// tabs
-const tabs=document.querySelectorAll(".tab");
+// tabs (header only — jangan ambil pill log)
+const navTabs=document.querySelectorAll("#tabs .tab");
 function showView(name){
-  tabs.forEach(b=>b.classList.toggle("active",b.dataset.view===name));
+  navTabs.forEach(b=>b.classList.toggle("active",b.dataset.view===name));
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));
   location.hash=name;
   if(name==="grafik")fetchHistory();
   if(name==="log")fetchLogs();
   if(name==="jadwal")loadSchedules();
 }
-tabs.forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+navTabs.forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
 if(location.hash)showView(location.hash.slice(1));
 else showView("dash");
 async function fetchState(){
@@ -418,6 +424,8 @@ fetchState();setInterval(fetchState,5000);
 async function loadSettings(){
   try{const r=await fetch("/api/settings/get");const s=await r.json();
     if($("setPoll")) $("setPoll").value=s.poll_interval||5;
+    if($("setPublicUrl")) $("setPublicUrl").value=s.public_url||"";
+    if($("cronSampleUrl")) $("cronSampleUrl").textContent=s.public_url? s.public_url + "/api/cron/" + (s.cron_token||"").slice(0,8)+'…/lamp/on' : location.origin + "/api/cron/…";
     // oled lines handled by refreshDefs, but set if already built
     if(_oledOptsBuilt){
       $("setLine1").value=s.oled_line1; $("setLine2").value=s.oled_line2; $("setLine3").value=s.oled_line3; $("setLine4").value=s.oled_line4;
@@ -511,21 +519,45 @@ $("saveCronKey").addEventListener("click",async()=>{
   const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cron_api_key:key})});
   if(r.ok)toast("API key disimpan ✓");else toast("Gagal simpan");
 });
+$("savePublicUrl").addEventListener("click",async()=>{
+  const url=$("setPublicUrl").value.trim();
+  // kosong = clear (auto)
+  if(url && !/^https?:\/\//.test(url)){toast("Harus https://... atau kosong");return}
+  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({public_url:url})});
+  if(r.ok){toast(url?"Domain disimpan ✓":"Domain di-reset (auto) ✓");loadSettings();}
+  else toast("Gagal simpan");
+});
 // jadwal — tabel
+async function updateCronDomainInfo(){
+  try{
+    const r=await fetch("/api/settings/get");
+    if(!r.ok) return;
+    const s=await r.json();
+    const base=s.public_url||location.origin;
+    const host=new URL(base).host||location.host;
+    const isLocal=host.includes("localhost")||host.includes("127.0.0.1");
+    const el=document.getElementById("cronDomainInfo");
+    if(!el) return;
+    const warn=isLocal?'<span style="color:var(--bad);">⚠ masih localhost — cron-job.org tidak bisa hit ini. Akses via domain/IP publik sekali biar auto-set.</span>':'<span style="color:var(--good);">✓ siap — cron akan hit domain ini.</span>';
+    const sample=s.cron_token?`${base}/api/cron/${s.cron_token.slice(0,8)}…/lamp/on`:'(token belum ada)';
+    el.innerHTML=`<div><b>Domain cron:</b> ${base} · host: ${host} — ${warn}</div><div style="margin-top:4px;opacity:.8;">contoh URL: <code style="word-break:break-all;">${sample}</code> &nbsp; <span style="opacity:.6;">(diakses: <code>${location.host}</code> via ${location.protocol})</span></div>`;
+  }catch(e){}
+}
 async function loadSchedules(){
   try{const r=await fetch("/api/schedules");const list=await r.json();const tb=$("schedBody");
-    if(!list.length){tb.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr>';return}
+    if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Belum ada jadwal.</td></tr>';return}
     tb.innerHTML=list.map(s=>{
-      // lookup label from _relays
       let t=s.relay; let ic="";
       const def=_relays.find(x=>x.id===s.relay);
       if(def){ t=def.label; ic=def.icon||""; }
       const st=s.state==="on"?"ON":"OFF";
       const badge=s.state==="on"?"on":"off";
       const hm=String(s.hour).padStart(2,"0")+":"+String(s.minute).padStart(2,"0");
-      return `<tr><td>${t} ${ic}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td style="display:flex;gap:4px;"><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="editSched(${s.id},'${hm}')" title="Edit jam">✎</button><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
+      const hit=s.hit_count||0;
+      return `<tr><td>${t} ${ic}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><input type="checkbox" class="switch" style="width:36px;height:22px;" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></td><td style="text-align:center;font-variant-numeric:tabular-nums;">${hit}</td><td style="display:flex;gap:4px;"><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="editSched(${s.id},'${hm}')" title="Edit jam">✎</button><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
     }).join("");
   }catch(e){}
+  updateCronDomainInfo();
 }
 window.toggleSched=async(id,on)=>{
   await fetch("/api/schedule/"+id+"/toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:on})});

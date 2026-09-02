@@ -31,6 +31,7 @@ func dbInit() {
 			log.Fatal("migrate:", err, s)
 		}
 	}
+	db.Exec(`ALTER TABLE schedules ADD COLUMN hit_count INTEGER DEFAULT 0`)
 	migrateFromJSON()
 	syncSettingsFromDB()
 }
@@ -198,13 +199,13 @@ func syncSettingsFromDB() {
 		}
 	}
 	// schedules
-	rows, _ = db.Query(`SELECT id,relay,state,hour,minute,enabled,cron_job_id FROM schedules ORDER BY id`)
+	rows, _ = db.Query(`SELECT id,relay,state,hour,minute,enabled,cron_job_id,hit_count FROM schedules ORDER BY id`)
 	if rows != nil {
 		var sc []Schedule
 		for rows.Next() {
 			var s Schedule
 			var en int
-			rows.Scan(&s.ID, &s.Relay, &s.State, &s.Hour, &s.Minute, &en, &s.CronJobID)
+			rows.Scan(&s.ID, &s.Relay, &s.State, &s.Hour, &s.Minute, &en, &s.CronJobID, &s.HitCount)
 			s.Enabled = en != 0
 			sc = append(sc, s)
 		}
