@@ -111,6 +111,9 @@ func (s *State) setRelay(which string, on bool) {
 	}
 	s.UpdatedAt = time.Now().Unix()
 	s.mu.Unlock()
+	// dorong ke UNO kalau tersambung (no-op saat mock); async biar HTTP tak nunggu serial
+	go serialPushRelay(which, on)
+	go serialPushOLED()
 }
 
 func (s *State) getRelay(which string) bool {

@@ -172,7 +172,6 @@ func handleRelay(w http.ResponseWriter, r *http.Request) {
 	}
 	addLog(realIP(r), fmt.Sprintf("relay %s: %s", label, what))
 
-	// TODO: send command to UNO via serial
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
 		"relay":  req.Relay,
@@ -204,7 +203,7 @@ func handleOLED(w http.ResponseWriter, r *http.Request) {
 
 	addLog(realIP(r), fmt.Sprintf("oled: %s", req.Text))
 
-	// TODO: send to UNO via serial
+	go serialPushOLED()
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
 		"text":   req.Text,
