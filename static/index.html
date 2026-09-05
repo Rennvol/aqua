@@ -135,10 +135,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     <div class="grid" style="margin-top:var(--space-4)">
       <div class="card col-6">
         <h2>STB Host</h2>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:var(--text-sm);">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:var(--text-sm);">
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Suhu</div><div id="hostTemp" style="font-weight:600;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">RAM</div><div id="hostRam" style="font-weight:600;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Load 1m</div><div id="hostLoad" style="font-weight:600;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Uptime</div><div id="hostUptime" style="font-weight:600;">—</div></div>
         </div>
         <div class="meta" style="margin-top:8px;">/proc + thermal_zone0 (STB = ada, Oracle = --)</div>
       </div>
@@ -334,7 +335,7 @@ async function refreshDefs(){
     if(rS.ok) _sensors=await rS.json();
     // build oled selects dynamically once
     if(!_oledOptsBuilt && _sensors.length){
-      const extra=[{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"text",label:"Teks Custom"}];
+      const extra=[{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"text",label:"Teks Custom"}];
       const all=[..._sensors, ...extra];
       ["setLine1","setLine2","setLine3","setLine4"].forEach(id=>{
         const sel=$(id); if(!sel) return;
@@ -404,7 +405,10 @@ function render(s){
   if($("hostTemp")){$("hostTemp").textContent=s.host_temp? (s.host_temp.toFixed(1)+" °C"):"—"}
   if($("hostRam")){$("hostRam").textContent=s.host_mem_pct? (s.host_mem_pct.toFixed(0)+" %"):"—"}
   if($("hostLoad")){$("hostLoad").textContent=s.host_load? s.host_load.toFixed(2):"—"}
+  if($("hostUptime")){$("hostUptime").textContent=s.host_uptime? fmtUp(s.host_uptime):"—"}
 }
+// fmtUp: detik -> "3h12m" / "2d5h", versi JS dari fmtUptime Go.
+function fmtUp(sec){sec=Math.floor(sec);if(sec<60)return sec+"s up";const m=Math.floor(sec/60);if(m<60)return m+"m up";const h=Math.floor(m/60);if(h<48)return h+"h"+(m%60)+"m";const d=Math.floor(h/24);return d+"d"+(h%24)+"h";}
 async function setRelay(which,on){
   const r=await fetch("/api/relay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay:which,on})});
   const d=await r.json();if(!r.ok){toast("Gagal: "+(d.error||r.status));return false}return true;

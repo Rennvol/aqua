@@ -65,6 +65,15 @@ func updateHostStats() {
 			st.mu.Unlock()
 		}
 	}
+	if b, err := os.ReadFile("/proc/uptime"); err == nil {
+		if f := strings.Fields(string(b)); len(f) > 0 {
+			if v, err := strconv.ParseFloat(f[0], 64); err == nil {
+				st.mu.Lock()
+				st.HostUptime = v
+				st.mu.Unlock()
+			}
+		}
+	}
 }
 
 func parseMemKB(line string) int64 {
@@ -74,6 +83,25 @@ func parseMemKB(line string) int64 {
 	}
 	v, _ := strconv.ParseInt(f[1], 10, 64)
 	return v
+}
+
+// fmtUptime format ringkas muat 20 char OLED: "3h12m", "2d5h", "45m", "30s".
+// ponytail: tanpa tahun/bulan, uptime STB jarang lewat 30 hari.
+func fmtUptime(sec float64) string {
+	s := int64(sec)
+	if s < 60 {
+		return strconv.FormatInt(s, 10) + "s up"
+	}
+	m := s / 60
+	if m < 60 {
+		return strconv.FormatInt(m, 10) + "m up"
+	}
+	h := m / 60
+	if h < 48 {
+		return strconv.FormatInt(h, 10) + "h" + strconv.FormatInt(m%60, 10) + "m"
+	}
+	d := h / 24
+	return strconv.FormatInt(d, 10) + "d" + strconv.FormatInt(h%24, 10) + "h"
 }
 
 func renderOLEDLine(key string) string {
@@ -95,6 +123,7 @@ func renderOLEDLine(key string) string {
 	hostTemp := st.HostTemp
 	hostMem := st.HostMemPct
 	hostLoad := st.HostLoad
+	hostUptime := st.HostUptime
 	oledText := st.OLEDText
 	st.mu.RUnlock()
 
@@ -146,6 +175,8 @@ func renderOLEDLine(key string) string {
 		return strconv.FormatFloat(hostMem, 'f', 0, 64) + "% RAM"
 	case "stb_load":
 		return strconv.FormatFloat(hostLoad, 'f', 2, 64) + " load"
+	case "stb_uptime":
+		return fmtUptime(hostUptime)
 	case "text":
 		if oledText != "" {
 			return oledText
