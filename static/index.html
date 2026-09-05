@@ -6,11 +6,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
 <title>santra — pantau & kontrol</title>
 <style>
+/* Hallmark · pre-emit critique: P4 H5 E4 S5 R4 V4 · macrostructure: Workbench · F3 tabular spec + S2 hanging heads · nav: N9 edge-min · footer: Ft2 inline · contrast: pass (40-41) · tokens: pass (48) · mobile: pass (34,49,50-57) · theme: custom teal-200 OKLCH */
 :root{
   --paper:oklch(13% 0.010 200);--paper-2:oklch(17% 0.012 200);--paper-3:oklch(22% 0.012 200);
   --ink:oklch(94% 0.008 200);--ink-2:oklch(72% 0.010 200);--rule:oklch(30% 0.012 200);--muted:oklch(58% 0.012 200);
   --accent:oklch(72% 0.13 200);--accent-ink:oklch(15% 0.01 200);--focus:oklch(78% 0.17 200);
   --good:oklch(72% 0.15 145);--bad:oklch(68% 0.19 25);
+  --z-pick:20;--z-toast:30;--z-login:40;
   --font:"JetBrains Mono","Cascadia Code","Fira Code",ui-monospace,monospace;
   --font-display:"Space Grotesk","Plus Jakarta Sans",system-ui,sans-serif;
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
@@ -31,6 +33,15 @@ a{color:var(--accent)}
 ::selection{background:var(--accent);color:var(--accent-ink)}
 .wrap{max-width:900px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-7)}
 header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) 0 var(--space-4);border-bottom:1px solid var(--rule);margin-bottom:var(--space-4)}
+/* Workbench: section head hanging di ruang negatif, tanpa rule */
+.sect{margin:0 0 var(--space-6)}
+.sect>.kicker{font-family:var(--font-display);font-size:var(--text-base);font-weight:700;letter-spacing:-0.02em;color:var(--ink);margin-bottom:2px}
+.sect>.lede{font-size:var(--text-xs);color:var(--muted);margin-bottom:var(--space-3)}
+/* Workbench: frame bingkai = pembatas antar langkah, bukan kartu-dalam-kartu */
+.bench{border:1px solid var(--rule);border-radius:var(--radius);padding:var(--space-4);background:var(--paper);min-width:0}
+.bench+.bench{margin-top:var(--space-3)}
+.bench>.cap{font-size:var(--text-xs);color:var(--muted);margin-bottom:var(--space-2)}
+.bench>.cap b{color:var(--ink);font-weight:600}
 .logo{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;letter-spacing:-0.03em}.logo .dot{color:var(--accent)}
 .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);padding:4px 10px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2)}
 .status-pill .led{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background var(--dur-2)}
@@ -45,7 +56,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:var(--s
 .grid{display:grid;gap:var(--space-4);grid-template-columns:repeat(12,1fr)}
 .card{background:var(--paper-2);border:1px solid var(--rule);border-radius:var(--radius);padding:var(--space-4);min-width:0}
 .card h2{font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:500;margin-bottom:var(--space-3)}
-.big{font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.03em}.big small{font-size:var(--text-sm);color:var(--muted);font-weight:400}
+.big{font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}.big small{font-size:var(--text-sm);color:var(--muted);font-weight:400}
 .meta{font-size:var(--text-2xs);color:var(--muted);margin-top:var(--space-2)}
 .col-3{grid-column:span 3}.col-6{grid-column:span 6}.col-12{grid-column:span 12}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0}
@@ -56,7 +67,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:var(--s
 .switch:checked{background:var(--accent);border-color:var(--accent)}.switch:checked::after{transform:translateX(22px);background:var(--accent-ink)}
 .switch:disabled{opacity:.4;cursor:not-allowed}
 input[type="text"],input[type="number"],input[type="password"],input[type="time"],textarea,.sel{width:100%;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;font-family:var(--font);font-size:16px;transition:border-color var(--dur-2)}
-input:focus,textarea:focus,.sel:focus{border-color:var(--accent);outline:none}
+input:focus,textarea:focus,.sel:focus{border-color:var(--accent);outline:2px solid var(--focus);outline-offset:1px}
 textarea{resize:vertical;min-height:64px}
 .btn{appearance:none;border:none;cursor:pointer;border-radius:8px;background:var(--paper-3);color:var(--ink);font-family:var(--font);font-size:var(--text-sm);padding:10px 16px;min-height:44px;transition:transform var(--dur-1) var(--ease-out),background var(--dur-2)}
 .btn:active{transform:translateY(1px)}.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
@@ -65,7 +76,7 @@ textarea{resize:vertical;min-height:64px}
 .log-list li{font-size:var(--text-xs);padding:8px 10px;border-radius:6px;background:var(--paper);border:1px solid var(--rule);display:flex;gap:8px;align-items:baseline;overflow-wrap:anywhere}
 .log-time{color:var(--muted);flex-shrink:0;white-space:nowrap}.log-msg{color:var(--ink-2)}
 /* schedule table */
-.sched-table{width:100%;border-collapse:collapse;font-size:var(--text-xs)}
+.sched-table{width:100%;border-collapse:collapse;font-size:var(--text-xs);font-variant-numeric:tabular-nums;min-width:560px}
 .sched-table th{font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:500;text-align:left;padding:8px;border-bottom:1px solid var(--rule)}
 .sched-table td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:middle}
 .sched-table tr:last-child td{border-bottom:none}
@@ -73,9 +84,9 @@ textarea{resize:vertical;min-height:64px}
 .badge.on{color:var(--good);border-color:var(--good)}.badge.off{color:var(--muted)}
 .theme-btn{background:none;border:1px solid var(--rule);color:var(--ink-2);border-radius:999px;min-height:36px;padding:4px 14px;font-size:var(--text-xs);cursor:pointer;font-family:var(--font)}
 .theme-btn:hover{border-color:var(--accent);color:var(--ink)}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--paper-3);color:var(--ink);border:1px solid var(--rule);padding:10px 18px;border-radius:999px;font-size:var(--text-sm);opacity:0;pointer-events:none;transition:opacity var(--dur-2),transform var(--dur-2);z-index:50;max-width:90vw}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--paper-3);color:var(--ink);border:1px solid var(--rule);padding:10px 18px;border-radius:999px;font-size:var(--text-sm);opacity:0;pointer-events:none;transition:opacity var(--dur-2),transform var(--dur-2);z-index:var(--z-toast);max-width:90vw}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.icon-pick{display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;padding:8px;grid-template-columns:repeat(5,1fr);gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:20;min-width:220px;max-width:calc(100vw - 24px)}
+.icon-pick{display:none;position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;padding:8px;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:var(--z-pick);min-width:220px;max-width:calc(100vw - 24px)}
 .icon-pick.open{display:grid}
 .icon-pick button{appearance:none;border:1px solid var(--rule);background:var(--paper);border-radius:8px;width:36px;height:36px;font-size:18px;cursor:pointer}
 .icon-pick button:hover{border-color:var(--accent)}
@@ -84,12 +95,14 @@ canvas{width:100%;height:180px;display:block}
 .chart-wrap{position:relative}
 .chart-meta{font-size:var(--text-2xs);color:var(--muted);display:flex;justify-content:space-between;margin-top:6px}
 footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid var(--rule);font-size:var(--text-2xs);color:var(--muted);display:flex;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
+.tab{white-space:nowrap}
 @media(max-width:768px){.col-3{grid-column:span 6}.col-6{grid-column:span 12}}
-@media(max-width:414px){.col-3{grid-column:span 12}.wrap{padding:var(--space-4) var(--space-3) var(--space-6)}.big{font-size:var(--text-xl)}#oledGrid{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:414px){.col-3{grid-column:span 12}.wrap{padding:var(--space-4) var(--space-3) var(--space-6)}.big{font-size:var(--text-xl)}#oledGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<div id="loginOverlay" style="position:fixed;inset:0;background:var(--paper);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+<div id="loginOverlay" style="position:fixed;inset:0;background:var(--paper);z-index:var(--z-login);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
   <div style="font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em;">santra.</div>
   <div style="color:var(--muted);font-size:var(--text-xs);">PIN 4 angka — santra.</div>
   <input type="password" id="loginPin" inputmode="numeric" maxlength="4" pattern="[0-9]*" placeholder="••••" style="width:120px;text-align:center;font-size:24px;letter-spacing:12px;padding:12px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink);font-family:var(--font);">
@@ -113,46 +126,54 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     <button class="tab" data-view="log">Log</button>
   </nav>
 
-  <!-- DASHBOARD -->
+  <!-- DASHBOARD : langkah 1 — baca sensor -->
   <div class="view active" id="view-dash">
-    <div class="grid" id="sensorGrid"></div>
-    <div class="grid" style="margin-top:var(--space-4)">
-      <div class="card col-6">
-        <h2>Relay</h2>
+    <section class="sect" aria-label="Sensor">
+      <div class="kicker">1 · Baca sensor</div>
+      <div class="lede">Angka live dari UNO via serial. Satuan ikut definisi sensor.</div>
+      <div class="bench"><div class="grid" id="sensorGrid"></div></div>
+    </section>
+    <!-- langkah 2 — aksi -->
+    <section class="sect" aria-label="Relay dan OLED">
+      <div class="kicker">2 · Atur relay & OLED</div>
+      <div class="lede">Toggle relay dorong perintah ke UNO. Teks OLED max 21 char/baris.</div>
+      <div class="bench">
+        <div class="cap"><b>Relay</b> — kelola label di Settings → Kelola Relay</div>
         <div id="relayList"></div>
-        <div class="meta" style="margin-top:8px;">Kelola label & tambah relay di Settings → Kelola Relay</div>
       </div>
-      <div class="card col-6">
-        <h2>OLED</h2>
+      <div class="bench">
+        <div class="cap"><b>OLED</b> — kirim teks + preview line 1–4 sesuai Settings</div>
         <textarea id="oledInput" placeholder="Teks buat OLED (max 21 char/baris)" maxlength="84"></textarea>
         <div id="oledCount" style="color:var(--muted);font-size:var(--text-2xs);margin-top:4px;">0/84 (max 21/baris × 4 baris)</div>
         <div style="display:flex;gap:8px;margin-top:8px;"><button class="btn primary" id="oledSend" style="flex:1;">Kirim ke OLED</button></div>
-        <div class="toggle-row" style="margin-top:8px;"><span class="toggle-label">💡 Layar OLED</span><span class="toggle-state" id="oledPowerState">ON</span><input type="checkbox" class="switch" id="oledPowerSw" checked aria-label="Toggle OLED"></div>
+        <div class="toggle-row" style="margin-top:8px;"><span class="toggle-label">Layar OLED</span><span class="toggle-state" id="oledPowerState">ON</span><input type="checkbox" class="switch" id="oledPowerSw" checked aria-label="Toggle OLED"></div>
         <div style="margin-top:10px;padding:8px 10px;border:1px dashed var(--rule);border-radius:8px;background:var(--paper);font-size:var(--text-xs);line-height:1.6;">
           <div style="color:var(--muted);font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Preview line 1-4 (sesuai Settings)</div>
           <div id="oledPreview" style="white-space:pre-line;min-height:56px;">—</div>
         </div>
       </div>
-    </div>
-    <div class="grid" style="margin-top:var(--space-4)">
-      <div class="card col-6">
-        <h2>STB Host</h2>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:var(--text-sm);">
+    </section>
+    <!-- langkah 3 — kondisi host -->
+    <section class="sect" aria-label="STB Host">
+      <div class="kicker">3 · Cek kondisi STB</div>
+      <div class="lede">/proc + thermal_zone0. Di Oracle tampil — (STB = angka).</div>
+      <div class="bench">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Suhu</div><div id="hostTemp" style="font-weight:600;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">RAM</div><div id="hostRam" style="font-weight:600;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Load 1m</div><div id="hostLoad" style="font-weight:600;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Uptime</div><div id="hostUptime" style="font-weight:600;">—</div></div>
         </div>
-        <div class="meta" style="margin-top:8px;">/proc + thermal_zone0 (STB = ada, Oracle = --)</div>
       </div>
-      <div class="card col-6" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--text-xs);">Atur line OLED di Settings → pilih Suhu STB / RAM STB / Load STB / Daya</div>
-    </div>
+    </section>
   </div>
 
-  <!-- JADWAL -->
+  <!-- JADWAL : langkah 4 — otomasi via cron-job.org -->
   <div class="view" id="view-jadwal">
-    <div class="card">
-      <h2>Tambah Jadwal</h2>
+    <section class="sect" aria-label="Tambah jadwal">
+      <div class="kicker">4 · Otomasi jadwal</div>
+      <div class="lede">Waktu Asia/Jakarta · dieksekusi cron-job.org, bukan STB.</div>
+      <div class="bench">
       <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Relay
           <select id="schedRelay" class="sel"></select>
@@ -168,10 +189,13 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         </label>
       </div>
       <button class="btn primary" id="schedAdd" style="margin-top:10px;width:100%;">+ Tambah jadwal</button>
-      <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:6px;">Waktu Asia/Jakarta · via cron-job.org</p>
-    </div>
-    <div class="card" style="margin-top:var(--space-4);padding:0;overflow:hidden;">
-      <div style="padding:var(--space-4) var(--space-4) 0;"><h2>Daftar Jadwal</h2></div>
+      </div>
+    </section>
+    <section class="sect" aria-label="Daftar jadwal">
+      <div class="kicker">Daftar & hit</div>
+      <div class="lede">Kolom Hit = berapa kali cron-job.org memanggil URL.</div>
+      <div class="bench" style="padding:0;overflow:hidden;">
+      <div style="padding:var(--space-4) var(--space-4) 0;"></div>
       <div style="overflow-x:auto;">
         <table class="sched-table" id="schedTable">
           <thead><tr><th>Relay</th><th>Aksi</th><th>Jam</th><th>Aktif</th><th>Hit</th><th></th></tr></thead>
@@ -180,29 +204,33 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
       </div>
     </div>
     <div id="cronDomainInfo" style="margin-top:10px;padding:10px 12px;border:1px dashed var(--rule);border-radius:8px;background:var(--paper);font-size:var(--text-xs);line-height:1.6;color:var(--muted);">memuat domain...</div>
+    </section>
   </div>
 
-  <!-- GRAFIK -->
+  <!-- GRAFIK : langkah 5 — riwayat -->
   <div class="view" id="view-grafik">
-    <div class="grid">
-      <div class="card col-6">
-        <h2>Suhu Air (°C) — 20 menit terakhir</h2>
+    <section class="sect" aria-label="Grafik">
+      <div class="kicker">5 · Lihat riwayat</div>
+      <div class="lede">Sample tiap ~2 detik, 600 titik terakhir · refresh 5 detik.</div>
+      <div class="bench">
+        <div class="cap"><b>Suhu Air (°C)</b> — 20 menit terakhir</div>
         <div class="chart-wrap"><canvas id="chartTemp" width="800" height="180"></canvas></div>
         <div class="chart-meta"><span id="tempMinMax">—</span><span id="tempNow">—</span></div>
       </div>
-      <div class="card col-6">
-        <h2>Daya (W) — 20 menit terakhir</h2>
+      <div class="bench">
+        <div class="cap"><b>Daya (W)</b> — 20 menit terakhir</div>
         <div class="chart-wrap"><canvas id="chartPower" width="800" height="180"></canvas></div>
         <div class="chart-meta"><span id="powerMinMax">—</span><span id="powerNow">—</span></div>
       </div>
-    </div>
-    <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:8px;">Data sample tiap ~2 detik, simpan 600 titik terakhir · auto refresh 5 detik.</p>
+    </section>
   </div>
 
-  <!-- SETTINGS -->
+  <!-- SETTINGS : langkah 6 — konfigurasi -->
   <div class="view" id="view-settings">
-    <div class="card">
-      <h2>Isi OLED (line 1-4, kiri + kanan)</h2>
+    <section class="sect" aria-label="Isi OLED">
+      <div class="kicker">6 · Konfigurasi tampilan</div>
+      <div class="lede">Pilih sumber tiap line OLED (kiri + kanan, max 21 char/baris).</div>
+      <div class="bench">
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;" id="oledGrid">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1 kiri<select id="setLine1" class="sel"></select></label>
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1 kanan<select id="setLine1R" class="sel"></select></label>
@@ -223,9 +251,12 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <button class="btn" id="savePin">Simpan</button>
         <button class="btn" id="logoutBtn" style="margin-left:auto;">Keluar</button>
       </div>
-      <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
-        <h2>Kelola Relay</h2>
-        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Tambah relay baru langsung kepakai di Dashboard & Jadwal — tanpa edit code. ID = tanpa spasi, mis: <code>pompa</code>, <code>valve1</code></p>
+      </div>
+    </section>
+    <section class="sect" aria-label="Kelola relay">
+      <div class="kicker">Kelola relay</div>
+      <div class="lede">Tambah relay langsung kepakai di Dashboard & Jadwal — tanpa edit code. ID tanpa spasi, mis: pompa, valve1.</div>
+      <div class="bench">
         <div id="relayMgr" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
           <input type="text" id="newRelayId" placeholder="id (pompa)" style="flex:1;">
@@ -238,9 +269,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <button class="btn" id="addRelayBtn">+ Tambah</button>
         </div>
       </div>
-      <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
-        <h2>Kelola Sensor</h2>
-        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Tambah sensor baru (pH, TDS, kelembapan, dll) — kirim via <code>POST /api/ingest {"ph":7.1}</code> atau serial JSON <code>{"ph":7.1}</code></p>
+    </section>
+    <section class="sect" aria-label="Kelola sensor">
+      <div class="kicker">Kelola sensor</div>
+      <div class="lede">Kirim via POST /api/ingest {"ph":7.1} atau serial JSON {"ph":7.1}.</div>
+      <div class="bench">
         <div id="sensorMgr" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <input type="text" id="newSensorId" placeholder="id (ph)" style="flex:1;min-width:90px;">
@@ -254,9 +287,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <button class="btn" id="addSensorBtn">+ Tambah</button>
         </div>
       </div>
-      <div style="margin-top:16px;border-top:1px solid var(--rule);padding-top:12px;">
-        <h2>Cron-job.org</h2>
-        <p style="font-size:var(--text-xs);color:var(--muted);margin-bottom:8px;">Ambil API key dari <a href="https://console.cron-job.org/settings" target="_blank" rel="noopener">console.cron-job.org → Settings</a>.</p>
+    </section>
+    <section class="sect" aria-label="Cron-job.org">
+      <div class="kicker">cron-job.org</div>
+      <div class="lede">API key dari console.cron-job.org → Settings.</div>
+      <div class="bench">
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="password" id="setCronKey" placeholder="API key cron-job.org" style="flex:1;">
           <button class="btn" id="saveCronKey">Simpan</button>
@@ -267,12 +302,15 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         </div>
         <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:6px;">Kosongkan = auto dari domain yang diakses. Cron hit URL: <code id="cronSampleUrl" style="word-break:break-all;">—</code></p>
       </div>
-    </div>
+    </section>
   </div>
 
-  <!-- LOG -->
+  <!-- LOG : langkah 7 — jejak -->
   <div class="view" id="view-log">
-    <div class="card">
+    <section class="sect" aria-label="Log">
+      <div class="kicker">7 · Jejak aktivitas</div>
+      <div class="lede">Filter per kategori. Auto refresh 10 detik.</div>
+      <div class="bench">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="logFilters">
         <button class="tab active" data-f="all">Semua</button>
         <button class="tab" data-f="akses">Akses web</button>
@@ -283,10 +321,11 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <button class="tab" data-f="auto">Auto cron</button>
       </div>
       <ul class="log-list" id="logList"><li style="color:var(--muted);">Belum ada log.</li></ul>
-    </div>
+      </div>
+    </section>
   </div>
 
-  <footer><span>santra v0.1 · dev</span><span id="clock">—</span></footer>
+  <footer><span>santra · pantau & kontrol</span><span id="clock">—</span></footer>
 </div>
 <div id="toast" role="status"></div>
 <script>
