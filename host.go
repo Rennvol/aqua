@@ -203,5 +203,15 @@ func oledLines() [4]string {
 	settings.mu.RLock()
 	l1, l2, l3, l4 := settings.OLEDLine1, settings.OLEDLine2, settings.OLEDLine3, settings.OLEDLine4
 	settings.mu.RUnlock()
-	return [4]string{renderOLEDLine(l1), renderOLEDLine(l2), renderOLEDLine(l3), renderOLEDLine(l4)}
+	return [4]string{fitOLED(renderOLEDLine(l1)), fitOLED(renderOLEDLine(l2)), fitOLED(renderOLEDLine(l3)), fitOLED(renderOLEDLine(l4))}
+}
+
+// fitOLED potong per baris max 21 runes (font ncenB08 ~6px/char di 128px).
+// Tanpa ini teks panjang overflow keluar layar (drawStr tak wrap).
+func fitOLED(s string) string {
+	r := []rune(s)
+	if len(r) > 21 {
+		return string(r[:21])
+	}
+	return s
 }
