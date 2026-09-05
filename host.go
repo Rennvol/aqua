@@ -202,8 +202,66 @@ func renderOLEDLine(key string) string {
 func oledLines() [4]string {
 	settings.mu.RLock()
 	l1, l2, l3, l4 := settings.OLEDLine1, settings.OLEDLine2, settings.OLEDLine3, settings.OLEDLine4
+	r1, r2, r3, r4 := settings.OLEDLine1R, settings.OLEDLine2R, settings.OLEDLine3R, settings.OLEDLine4R
 	settings.mu.RUnlock()
-	return [4]string{fitOLED(renderOLEDLine(l1)), fitOLED(renderOLEDLine(l2)), fitOLED(renderOLEDLine(l3)), fitOLED(renderOLEDLine(l4))}
+	return [4]string{renderPair(l1, r1), renderPair(l2, r2), renderPair(l3, r3), renderPair(l4, r4)}
+}
+
+// renderPair gabung kiri + kanan jadi 1 baris max 21 runes ("57.0C STB 28.5C").
+// Kanan kosong = mode 1 kolom seperti dulu. Relay dipadatkan (L:/F:) biar muat.
+func renderPair(lKey, rKey string) string {
+	if rKey == "" || rKey == "-" {
+		return fitOLED(renderOLEDLine(lKey))
+	}
+	l := renderOLEDLine(lKey)
+	r := renderOLEDLine(rKey)
+	if lKey == "relay" {
+		l = relayCompact()
+	}
+	if rKey == "relay" {
+		r = relayCompact()
+	}
+	lr, rr := []rune(l), []rune(r)
+	if len(rr) > 10 {
+		rr = rr[:10]
+	}
+	if len(lr)+1+len(rr) <= 21 {
+		return string(lr) + " " + string(rr)
+	}
+	keep := 21 - 1 - len(rr)
+	if keep < 0 {
+		keep = 0
+	}
+	return string(lr[:keep]) + " " + string(rr)
+}
+
+// relayCompact "lamp:OFF fan:OFF" -> "L:OFF F:OFF" (huruf depan ID kapital).
+func relayCompact() string {
+	settings.mu.RLock()
+	rels := append([]RelayDef(nil), settings.Relays...)
+	settings.mu.RUnlock()
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	parts := []string{}
+	for _, rd := range rels {
+		v := st.Relays[rd.ID]
+		if rd.ID == "lamp" {
+			v = st.RelayLamp
+		}
+		if rd.ID == "fan" {
+			v = st.RelayFan
+		}
+		on := "OFF"
+		if v {
+			on = "ON"
+		}
+		ab := strings.ToUpper(string([]rune(rd.ID)[:1]))
+		parts = append(parts, ab+":"+on)
+	}
+	if len(parts) == 0 {
+		return "--"
+	}
+	return strings.Join(parts, " ")
 }
 
 // fitOLED potong per baris max 21 runes (font ncenB08 ~6px/char di 128px).

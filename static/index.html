@@ -201,12 +201,16 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <!-- SETTINGS -->
   <div class="view" id="view-settings">
     <div class="card">
-      <h2>Isi OLED (line 1-4)</h2>
-      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;" id="oledGrid">
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1<select id="setLine1" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2<select id="setLine2" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3<select id="setLine3" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4<select id="setLine4" class="sel"><option value="temp">Suhu</option><option value="current">Arus</option><option value="voltage">Tegangan</option><option value="relay">Status Relay</option><option value="power">Daya</option><option value="stb_temp">Suhu STB</option><option value="stb_ram">RAM STB</option><option value="stb_load">Load STB</option><option value="text">Teks Custom</option></select></label>
+      <h2>Isi OLED (line 1-4, kiri + kanan)</h2>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;" id="oledGrid">
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1 kiri<select id="setLine1" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1 kanan<select id="setLine1R" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2 kiri<select id="setLine2" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2 kanan<select id="setLine2R" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3 kiri<select id="setLine3" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3 kanan<select id="setLine3R" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4 kiri<select id="setLine4" class="sel"></select></label>
+        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4 kanan<select id="setLine4R" class="sel"></select></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:6px;">Polling (detik)<input type="number" id="setPoll" min="2" max="60" value="5" style="width:70px;"></label>
@@ -336,9 +340,9 @@ async function refreshDefs(){
     if(rS.ok) _sensors=await rS.json();
     // build oled selects dynamically once
     if(!_oledOptsBuilt && _sensors.length){
-      const extra=[{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"text",label:"Teks Custom"}];
+      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"text",label:"Teks Custom"}];
       const all=[..._sensors, ...extra];
-      ["setLine1","setLine2","setLine3","setLine4"].forEach(id=>{
+      ["setLine1","setLine1R","setLine2","setLine2R","setLine3","setLine3R","setLine4","setLine4R"].forEach(id=>{
         const sel=$(id); if(!sel) return;
         const cur=sel.value;
         sel.innerHTML=all.map(o=>`<option value="${o.id}">${o.label}</option>`).join("");
@@ -346,7 +350,7 @@ async function refreshDefs(){
       });
       _oledOptsBuilt=true;
       // restore saved oled lines
-      if(rSet.ok){const s=await rSet.json(); ["setLine1","setLine2","setLine3","setLine4"].forEach((k,i)=>{const key=["oled_line1","oled_line2","oled_line3","oled_line4"][i]; if(s[key]) $(k).value=s[key];});}
+      if(rSet.ok){const s=await rSet.json(); [["setLine1","oled_line1"],["setLine1R","oled_line1r"],["setLine2","oled_line2"],["setLine2R","oled_line2r"],["setLine3","oled_line3"],["setLine3R","oled_line3r"],["setLine4","oled_line4"],["setLine4R","oled_line4r"]].forEach(([k,key])=>{ if(s[key]!==undefined && $(k)) $(k).value=s[key];});}
     }
     // jadwal select
     const sr=$("schedRelay"); if(sr && _relays.length){ const cur=sr.value; sr.innerHTML=_relays.map(r=>`<option value="${r.id}">${r.label} ${r.icon||""}</option>`).join(""); if(cur) sr.value=cur; }
@@ -434,13 +438,13 @@ async function loadSettings(){
     if($("cronSampleUrl")) $("cronSampleUrl").textContent=s.public_url? s.public_url + "/api/cron/" + (s.cron_token||"").slice(0,8)+'…/lamp/on' : location.origin + "/api/cron/…";
     // oled lines handled by refreshDefs, but set if already built
     if(_oledOptsBuilt){
-      $("setLine1").value=s.oled_line1; $("setLine2").value=s.oled_line2; $("setLine3").value=s.oled_line3; $("setLine4").value=s.oled_line4;
+      $("setLine1").value=s.oled_line1; $("setLine1R").value=s.oled_line1r||"-"; $("setLine2").value=s.oled_line2; $("setLine2R").value=s.oled_line2r||"-"; $("setLine3").value=s.oled_line3; $("setLine3R").value=s.oled_line3r||"-"; $("setLine4").value=s.oled_line4; $("setLine4R").value=s.oled_line4r||"-";
     }
   }catch(e){}
 }
 $("saveSettings").addEventListener("click",async()=>{
   const btn=$("saveSettings");btn.disabled=true;
-  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({oled_line1:$("setLine1").value,oled_line2:$("setLine2").value,oled_line3:$("setLine3").value,oled_line4:$("setLine4").value,poll_interval:parseInt($("setPoll").value)||5})});
+  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({oled_line1:$("setLine1").value,oled_line1r:$("setLine1R").value,oled_line2:$("setLine2").value,oled_line2r:$("setLine2R").value,oled_line3:$("setLine3").value,oled_line3r:$("setLine3R").value,oled_line4:$("setLine4").value,oled_line4r:$("setLine4R").value,poll_interval:parseInt($("setPoll").value)||5})});
   btn.disabled=false;if(r.ok)toast("Setting disimpan ✓");else toast("Gagal simpan");
 });
 

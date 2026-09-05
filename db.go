@@ -67,7 +67,7 @@ func migrateFromJSON() {
 		return
 	}
 	// kv fields
-	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "poll_interval", "cron_api_key", "cron_token", "public_url"} {
+	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r", "poll_interval", "cron_api_key", "cron_token", "public_url"} {
 		if v, ok := raw[k]; ok {
 			var s string
 			// try string, else number -> string
@@ -156,6 +156,20 @@ func syncSettingsFromDB() {
 	}
 	if v := kvGet("oled_line4", ""); v != "" {
 		settings.OLEDLine4 = v
+	}
+	for i, k := range []string{"oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r"} {
+		if v := kvGet(k, "\x00"); v != "\x00" {
+			switch i {
+			case 0:
+				settings.OLEDLine1R = v
+			case 1:
+				settings.OLEDLine2R = v
+			case 2:
+				settings.OLEDLine3R = v
+			case 3:
+				settings.OLEDLine4R = v
+			}
+		}
 	}
 	if v := kvGet("poll_interval", ""); v != "" {
 		var iv int

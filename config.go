@@ -28,6 +28,10 @@ type Settings struct {
 	OLEDLine2    string      `json:"oled_line2"`
 	OLEDLine3    string      `json:"oled_line3"`
 	OLEDLine4    string      `json:"oled_line4"`
+	OLEDLine1R   string      `json:"oled_line1r"`
+	OLEDLine2R   string      `json:"oled_line2r"`
+	OLEDLine3R   string      `json:"oled_line3r"`
+	OLEDLine4R   string      `json:"oled_line4r"`
 	PollInterval int         `json:"poll_interval"`
 	CronAPIKey   string      `json:"cron_api_key"`
 	CronToken    string      `json:"cron_token"`
@@ -120,6 +124,10 @@ func dbPersistAll() {
 	kvSet("oled_line2", settings.OLEDLine2)
 	kvSet("oled_line3", settings.OLEDLine3)
 	kvSet("oled_line4", settings.OLEDLine4)
+	kvSet("oled_line1r", settings.OLEDLine1R)
+	kvSet("oled_line2r", settings.OLEDLine2R)
+	kvSet("oled_line3r", settings.OLEDLine3R)
+	kvSet("oled_line4r", settings.OLEDLine4R)
 	kvSet("poll_interval", fmt.Sprint(settings.PollInterval))
 	kvSet("cron_api_key", settings.CronAPIKey)
 	kvSet("cron_token", settings.CronToken)
@@ -135,6 +143,10 @@ func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		"oled_line2":    settings.OLEDLine2,
 		"oled_line3":    settings.OLEDLine3,
 		"oled_line4":    settings.OLEDLine4,
+		"oled_line1r":   settings.OLEDLine1R,
+		"oled_line2r":   settings.OLEDLine2R,
+		"oled_line3r":   settings.OLEDLine3R,
+		"oled_line4r":   settings.OLEDLine4R,
 		"poll_interval": settings.PollInterval,
 		"public_url":    settings.PublicURL,
 		"cron_token":    settings.CronToken,
@@ -153,6 +165,10 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 		OLEDLine2    *string `json:"oled_line2"`
 		OLEDLine3    *string `json:"oled_line3"`
 		OLEDLine4    *string `json:"oled_line4"`
+		OLEDLine1R   *string `json:"oled_line1r"`
+		OLEDLine2R   *string `json:"oled_line2r"`
+		OLEDLine3R   *string `json:"oled_line3r"`
+		OLEDLine4R   *string `json:"oled_line4r"`
 		PollInterval *int    `json:"poll_interval"`
 		CronAPIKey   *string `json:"cron_api_key"`
 		PublicURL    *string `json:"public_url"`
@@ -173,6 +189,18 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.OLEDLine4 != nil {
 		settings.OLEDLine4 = *req.OLEDLine4
+	}
+	if req.OLEDLine1R != nil {
+		settings.OLEDLine1R = *req.OLEDLine1R
+	}
+	if req.OLEDLine2R != nil {
+		settings.OLEDLine2R = *req.OLEDLine2R
+	}
+	if req.OLEDLine3R != nil {
+		settings.OLEDLine3R = *req.OLEDLine3R
+	}
+	if req.OLEDLine4R != nil {
+		settings.OLEDLine4R = *req.OLEDLine4R
 	}
 	if req.PollInterval != nil && *req.PollInterval > 0 {
 		settings.PollInterval = *req.PollInterval
