@@ -58,8 +58,15 @@ func serialWriteLine(s string) {
 }
 
 // serialPushOLED kirim 4 baris render saat ini ke OLED via UNO.
+// Kalau OLED dimatikan: kirim 4 baris kosong = piksel mati (tanpa ubah firmware).
 func serialPushOLED() {
-	lines := oledLines()
+	st.mu.RLock()
+	on := st.OLEDOn
+	st.mu.RUnlock()
+	var lines [4]string
+	if on {
+		lines = oledLines()
+	}
 	b, _ := json.Marshal(map[string]interface{}{"cmd": "oled", "lines": lines[:]})
 	serialWriteLine(string(b))
 }

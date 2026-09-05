@@ -40,6 +40,7 @@ func main() {
 	mux.HandleFunc("/api/state", authMW(handleState))
 	mux.HandleFunc("/api/relay", authMW(handleRelay))
 	mux.HandleFunc("/api/oled", authMW(handleOLED))
+	mux.HandleFunc("/api/oled/power", authMW(handleOLEDPower))
 	mux.HandleFunc("/api/logs", authMW(handleLogs))
 	mux.HandleFunc("/api/settings", authMW(handleSetSettings))
 	mux.HandleFunc("/api/settings/get", authMW(handleGetSettings))
@@ -208,5 +209,36 @@ func handleOLED(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"text":   req.Text,
 		"sent":   true,
+	})
+}
+
+// handleOLEDPower ON/OFF layar. OFF = kirim 4 baris kosong (piksel mati,
+// hemat + cegah burn-in). Tanpa ubah firmware: sketch lama tetap jalan.
+func handleOLEDPower(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
+		return
+	}
+	var req struct {
+		On bool `json:"on"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
+		return
+	}
+	st.mu.Lock()
+	st.OLEDOn = req.On
+	st.mu.Unlock()
+
+	what := "OFF"
+	if req.On {
+		what = "ON"
+	}
+	addLog(realIP(r), "oled power: "+what)
+
+	go serialPushOLED()
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "ok",
+		"on":     req.On,
 	})
 }

@@ -127,6 +127,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <textarea id="oledInput" placeholder="Teks buat OLED (max 21 char/baris)" maxlength="84"></textarea>
         <div id="oledCount" style="color:var(--muted);font-size:var(--text-2xs);margin-top:4px;">0/84 (max 21/baris × 4 baris)</div>
         <div style="display:flex;gap:8px;margin-top:8px;"><button class="btn primary" id="oledSend" style="flex:1;">Kirim ke OLED</button></div>
+        <div class="toggle-row" style="margin-top:8px;"><span class="toggle-label">💡 Layar OLED</span><span class="toggle-state" id="oledPowerState">ON</span><input type="checkbox" class="switch" id="oledPowerSw" checked aria-label="Toggle OLED"></div>
         <div style="margin-top:10px;padding:8px 10px;border:1px dashed var(--rule);border-radius:8px;background:var(--paper);font-size:var(--text-xs);line-height:1.6;">
           <div style="color:var(--muted);font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Preview line 1-4 (sesuai Settings)</div>
           <div id="oledPreview" style="white-space:pre-line;min-height:56px;">—</div>
@@ -412,6 +413,7 @@ function render(s){
   if($("hostLoad")){$("hostLoad").textContent=s.host_load? s.host_load.toFixed(2):"—"}
   if($("hostUptime")){$("hostUptime").textContent=s.host_uptime? fmtUp(s.host_uptime):"—"}
   const _oi=$("oledInput");if(_oi&&!_oi.dataset.bound){_oi.dataset.bound="1";_oi.addEventListener("input",()=>{const n=_oi.value.length;const el=$("oledCount");if(el){el.textContent=n+"/84 (max 21/baris × 4 baris)";el.style.color=n>84?"var(--danger)":"var(--muted)"}})}
+  const _op=$("oledPowerSw");if(_op){const on=s.oled_on!==false;if(document.activeElement!==_op)_op.checked=on;const _st=$("oledPowerState");if(_st)_st.textContent=on?"ON":"OFF";if(!_op.dataset.bound){_op.dataset.bound="1";_op.addEventListener("change",async(e)=>{e.target.disabled=true;const r=await fetch("/api/oled/power",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:e.target.checked})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!e.target.checked}e.target.disabled=false;fetchState()})}}
 }
 // fmtUp: detik -> "3h12m" / "2d5h", versi JS dari fmtUptime Go.
 function fmtUp(sec){sec=Math.floor(sec);if(sec<60)return sec+"s up";const m=Math.floor(sec/60);if(m<60)return m+"m up";const h=Math.floor(m/60);if(h<48)return h+"h"+(m%60)+"m";const d=Math.floor(h/24);return d+"d"+(h%24)+"h";}

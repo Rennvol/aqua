@@ -15,6 +15,7 @@ type State struct {
 	RelayLamp   bool               `json:"relay_lamp"`  // legacy mirror Relays["lamp"]
 	RelayFan    bool               `json:"relay_fan"`   // legacy
 	OLEDText    string             `json:"oled_text"`
+	OLEDOn      bool               `json:"oled_on"` // false = layar dimatikan (hemat + cegah burn-in)
 	UpdatedAt   int64              `json:"updated_at"`
 	Mode        string             `json:"mode"`
 	HostTemp    float64            `json:"host_temp"`
@@ -28,6 +29,7 @@ type State struct {
 // st is the shared state instance.
 var st = &State{
 	Mode:    "mock",
+	OLEDOn:  true,
 	Relays:  map[string]bool{"lamp": false, "fan": false},
 	Sensors: map[string]float64{"temp": 0, "voltage": 0, "current": 0, "power": 0},
 }
@@ -52,6 +54,7 @@ func (s *State) snapshot() State {
 		RelayLamp:   s.RelayLamp,
 		RelayFan:    s.RelayFan,
 		OLEDText:    s.OLEDText,
+		OLEDOn:      s.OLEDOn,
 		UpdatedAt:   s.UpdatedAt,
 		Mode:        s.Mode,
 		HostTemp:    s.HostTemp,
