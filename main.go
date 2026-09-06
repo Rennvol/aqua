@@ -301,14 +301,18 @@ func handleClockAlwaysPower(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
 		return
 	}
+	needDisableClock := false
 	st.mu.Lock()
 	if req.On && st.ClockOn {
 		st.ClockOn = false
-		kvSet("clock_on", "0")
-		_ = pushClockJob(false)
+		needDisableClock = true
 	}
 	st.ClockAlwaysOn = req.On
 	st.mu.Unlock()
+	if needDisableClock {
+		kvSet("clock_on", "0")
+		_ = pushClockJob(false)
+	}
 	kvSet("clock_always_on", map[bool]string{true: "1", false: "0"}[req.On])
 	saveSettings(settings)
 	what := "OFF"

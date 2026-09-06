@@ -1,10 +1,16 @@
 {
-  "apps": [{
-    "name": "aqua",
-    "script": "./bin/aqua",
-    "cwd": "/home/ubuntu/aqua",
-    "env": { "PORT": "30221" },
-    "autorestart": true,
-    "max_memory_restart": "100M"
-  }]
+  "apps": [
+    {
+      "name": "aqua",
+      "script": "./bin/aqua",
+      "cwd": "/home/ubuntu/aqua",
+      "env": {
+        "PORT": "30221"
+      },
+      "autorestart": true,
+      "max_memory_restart": "400M",
+      "min_uptime": "10s",
+      "max_restarts": 20
+    }
+  ]
 }
