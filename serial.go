@@ -59,16 +59,47 @@ func serialWriteLine(s string) {
 
 // serialPushOLED kirim 4 baris render saat ini ke OLED via UNO.
 // Kalau OLED dimatikan: kirim 4 baris kosong = piksel mati (tanpa ubah firmware).
+// Kalau screensaver jam tampil: diam, jangan timpa (cek ClockUntil).
 func serialPushOLED() {
 	st.mu.RLock()
 	on := st.OLEDOn
+	until := st.ClockUntil
 	st.mu.RUnlock()
+	if time.Now().Unix() < until {
+		return // jam besar tampil, push dashboard ditahan
+	}
 	var lines [4]string
 	if on {
 		lines = oledLines()
 	}
 	b, _ := json.Marshal(map[string]interface{}{"cmd": "oled", "lines": lines[:]})
 	serialWriteLine(string(b))
+}
+
+// serialPushClock tampilkan jam besar (HH:MM WIB) selama dur detik, lalu balik dashboard.
+// Jam ikut STB (UNO tak punya RTC). Anti burn-in: cuma 10 dtk/jam + digit selalu beda.
+func serialPushClock(dur int) {
+	if dur <= 0 {
+		dur = 10
+	}
+	st.mu.RLock()
+	on := st.OLEDOn
+	co := st.ClockOn
+	st.mu.RUnlock()
+	if !on || !co {
+		return
+	}
+	txt := time.Now().In(time.FixedZone("WIB", 7*3600)).Format("15:04")
+	st.mu.Lock()
+	st.ClockUntil = time.Now().Unix() + int64(dur)
+	st.mu.Unlock()
+	b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": dur})
+	serialWriteLine(string(b))
+	// balik dashboard otomatis setelah durasi (+1 dtk jeda)
+	go func() {
+		time.Sleep(time.Duration(dur+1) * time.Second)
+		serialPushOLED()
+	}()
 }
 
 // serialPushRelay kirim perintah relay ke UNO (demo: lamp -> LED pin13).

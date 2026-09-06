@@ -442,16 +442,16 @@ func handleScheduleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleCron executes a relay on/off from cron-job.org hit.
-// GET /api/cron/{token}/{relay}/{state}
+// GET /api/cron/{token}/{relay}/{state}  relay
+// GET /api/cron/{token}/clock             screensaver jam besar 10 dtk
 func handleCron(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) < 5 || parts[0] != "api" || parts[1] != "cron" {
+	if len(parts) < 4 || parts[0] != "api" || parts[1] != "cron" {
 		http.Error(w, "not found", 404)
 		return
 	}
 	tok := parts[2]
-	relay := parts[3]
-	state := parts[4]
+	kind := parts[3]
 
 	settings.mu.RLock()
 	valid := tok != "" && tok == settings.CronToken
@@ -460,6 +460,32 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad token", 403)
 		return
 	}
+	// screensaver jam per jam: tiap jam menit 0 cron-job.org hit sini
+	if kind == "clock" {
+		st.mu.RLock()
+		co := st.ClockOn
+		oo := st.OLEDOn
+		st.mu.RUnlock()
+		if !co {
+			json.NewEncoder(w).Encode(map[string]string{"status": "off", "reason": "clock disabled"})
+			return
+		}
+		if !oo {
+			json.NewEncoder(w).Encode(map[string]string{"status": "off", "reason": "oled off"})
+			return
+		}
+		go serialPushClock(10)
+		addLog(realIP(r), "auto cron clock: jam besar 10 dtk")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "clock": "10s"})
+		return
+	}
+	if len(parts) < 5 {
+		http.Error(w, "not found", 404)
+		return
+	}
+	relay := parts[3]
+	state := parts[4]
+
 	if !relayExists(relay) {
 		http.Error(w, "bad relay", 400)
 		return

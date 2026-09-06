@@ -36,6 +36,7 @@ type Settings struct {
 	CronAPIKey   string      `json:"cron_api_key"`
 	CronToken    string      `json:"cron_token"`
 	PublicURL    string      `json:"public_url"`
+	ClockCronJobID int       `json:"clock_cron_job_id"` // jobId cron-job.org untuk jam per jam
 	Schedules    []Schedule  `json:"schedules"`
 	Relays       []RelayDef  `json:"relays"`
 	Sensors      []SensorDef `json:"sensors"`
@@ -132,6 +133,8 @@ func dbPersistAll() {
 	kvSet("cron_api_key", settings.CronAPIKey)
 	kvSet("cron_token", settings.CronToken)
 	kvSet("public_url", settings.PublicURL)
+	kvSet("clock_on", map[bool]string{true: "1", false: "0"}[st.ClockOn])
+	kvSet("clock_cron_job_id", fmt.Sprint(settings.ClockCronJobID))
 }
 
 func handleGetSettings(w http.ResponseWriter, r *http.Request) {
