@@ -345,9 +345,8 @@ func renderOLEDLine(key string) string {
 	hostDiskPct := st.HostDiskPct
 	hostDiskFree := st.HostDiskFree
 	hostCpuPct := st.HostCpuPct
-	hostNetIF := st.HostNetIF
 	hostNetRx := st.HostNetRx
-	_ = st.HostNetTx
+	hostNetTx := st.HostNetTx
 	oledText := st.OLEDText
 	st.mu.RUnlock()
 
@@ -419,10 +418,11 @@ func renderOLEDLine(key string) string {
 	case "stb_cpu":
 		return strconv.FormatFloat(hostCpuPct, 'f', 0, 64) + "% CPU"
 	case "stb_net":
-		if hostNetIF == "" {
+		if hostNetRx == "" && hostNetTx == "" {
 			return "- net"
 		}
-		return hostNetIF + " " + hostNetRx
+		// ponytail: 21 char limit — iface omitted, just rates
+		return "\u2193" + hostNetRx + " \u2191" + hostNetTx
 	case "stb_model":
 		{ m := st.HostModel; if m == "" { return "- model" }; if len([]rune(m)) > 21 { m = string([]rune(m)[:21]) }; return m }
 	case "stb_disk":
