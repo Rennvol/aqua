@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -41,6 +42,7 @@ func main() {
 	mux.HandleFunc("/api/relay", authMW(handleRelay))
 	mux.HandleFunc("/api/oled", authMW(handleOLED))
 	mux.HandleFunc("/api/oled/power", authMW(handleOLEDPower))
+	mux.HandleFunc("/api/clock/power", authMW(handleClockPower))
 	mux.HandleFunc("/api/logs", authMW(handleLogs))
 	mux.HandleFunc("/api/settings", authMW(handleSetSettings))
 	mux.HandleFunc("/api/settings/get", authMW(handleGetSettings))
@@ -241,4 +243,113 @@ func handleOLEDPower(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"on":     req.On,
 	})
+}
+
+// handleClockPower ON/OFF screensaver jam besar tiap jam.
+// ON = buat/aktifkan 1 job cron-job.org per jam menit 0 -> /api/cron/{token}/clock.
+// OFF = job dinonaktifkan (tetap ada, hemat kuota create). Tanpa API key = mode lokal saja.
+func handleClockPower(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
+		return
+	}
+	var req struct {
+		On bool `json:"on"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
+		return
+	}
+	st.mu.Lock()
+	st.ClockOn = req.On
+	st.mu.Unlock()
+	kvSet("clock_on", map[bool]string{true: "1", false: "0"}[req.On])
+	saveSettings(settings)
+
+	what := "OFF"
+	if req.On {
+		what = "ON"
+	}
+	addLog(realIP(r), "clock screensaver: "+what)
+
+	if err := pushClockJob(req.On); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok-local", "on": req.On, "warn": err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "ok",
+		"on":     req.On,
+		"job":    settings.ClockCronJobID,
+	})
+}
+
+// clockURL hit-URL publik untuk screensaver jam (1x per jam, ringan).
+func clockURL() string {
+	settings.mu.RLock()
+	tok := settings.CronToken
+	base := settings.PublicURL
+	settings.mu.RUnlock()
+	if base == "" {
+		base = "http://localhost:30221"
+	}
+	return strings.TrimRight(base, "/") + "/api/cron/" + tok + "/clock"
+}
+
+// pushClockJob buat/aktifkan 1 job per jam (minutes=[0], hours=all) di cron-job.org.
+// ponytail: 1 job untuk 24 hit/hari; tambah jadwal kedua kalau butuh 2x/jam.
+func pushClockJob(enabled bool) error {
+	settings.mu.RLock()
+	key := settings.CronAPIKey
+	jobID := settings.ClockCronJobID
+	settings.mu.RUnlock()
+	if key == "" {
+		return fmt.Errorf("cron_api_key belum diisi — jam jalan lokal saja, cron per jam belum dibuat")
+	}
+	payload := map[string]interface{}{
+		"job": map[string]interface{}{
+			"url":            clockURL(),
+			"enabled":        enabled,
+			"title":          "santra clock hourly",
+			"saveResponses":  false,
+			"requestTimeout": 30,
+			"schedule": map[string]interface{}{
+				"timezone": "Asia/Jakarta",
+				"expiresAt": 0,
+				"hours":    []int{-1},
+				"mdays":    []int{-1},
+				"minutes":  []int{0},
+				"months":   []int{-1},
+				"wdays":    []int{-1},
+			},
+		},
+	}
+	if jobID == 0 {
+		data, code, err := cronReq("PUT", "/jobs", mustJSON(payload))
+		if err != nil {
+			return err
+		}
+		if code != 200 {
+			return fmt.Errorf("cron-job create HTTP %d: %s", code, string(data))
+		}
+		var out struct {
+			JobID int `json:"jobId"`
+		}
+		if err := json.Unmarshal(data, &out); err != nil || out.JobID == 0 {
+			return fmt.Errorf("cron-job create: bad response %s", string(data))
+		}
+		settings.mu.Lock()
+		settings.ClockCronJobID = out.JobID
+		settings.mu.Unlock()
+		kvSet("clock_cron_job_id", strconv.Itoa(out.JobID))
+		saveSettings(settings)
+		return nil
+	}
+	data, code, err := cronReq("PATCH", fmt.Sprintf("/jobs/%d", jobID), mustJSON(payload))
+	if err != nil {
+		return err
+	}
+	if code != 200 {
+		return fmt.Errorf("cron-job update HTTP %d: %s", code, string(data))
+	}
+	return nil
 }
