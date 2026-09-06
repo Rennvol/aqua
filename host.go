@@ -158,6 +158,11 @@ func getOracleTail(selfTail string) string {
 		return ""
 	}
 	var data struct {
+		Self struct {
+			HostName     string   `json:"hostName"`
+			DNSName      string   `json:"dnsName"`
+			TailscaleIPs []string `json:"tailscaleIPs"`
+		} `json:"Self"`
 		Peer map[string]struct {
 			HostName     string   `json:"hostName"`
 			DNSName      string   `json:"dnsName"`
@@ -167,12 +172,20 @@ func getOracleTail(selfTail string) string {
 	if err := json.Unmarshal(out, &data); err != nil {
 		return ""
 	}
+	// di STB cari peer oracle
 	for _, pp := range data.Peer {
 		name := strings.ToLower(pp.HostName + " " + pp.DNSName)
 		if strings.Contains(name, "oracle") {
 			if len(pp.TailscaleIPs) > 0 && pp.TailscaleIPs[0] != selfTail {
 				return pp.TailscaleIPs[0]
 			}
+		}
+	}
+	// di Oracle sendiri: Self = oracle -> pakai Self IP
+	if len(data.Self.TailscaleIPs) > 0 {
+		name := strings.ToLower(data.Self.HostName + " " + data.Self.DNSName)
+		if strings.Contains(name, "oracle") {
+			return data.Self.TailscaleIPs[0]
 		}
 	}
 	return ""
