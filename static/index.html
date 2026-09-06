@@ -404,7 +404,7 @@ async function refreshDefs(){
     if(rS.ok) _sensors=await rS.json();
     // build oled selects dynamically once
     if(!_oledOptsBuilt && _sensors.length){
-      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"text",label:"Teks Custom"}];
+      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"stb_ip_local",label:"IP Lokal"},{id:"stb_ip_tail",label:"IP Tailscale STB"},{id:"oracle_tail",label:"IP Tailscale Oracle"},{id:"stb_disk",label:"Disk STB"},{id:"text",label:"Teks Custom"}];
       const all=[..._sensors, ...extra];
       ["setLine1","setLine1R","setLine2","setLine2R","setLine3","setLine3R","setLine4","setLine4R"].forEach(id=>{
         const sel=$(id); if(!sel) return;
