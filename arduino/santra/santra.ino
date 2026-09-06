@@ -71,7 +71,7 @@ void loop() {
       const char *t = doc["text"] | "88:88";
       int dur = doc["dur"] | 10;
       if (dur <= 0) dur = 10;
-      if (dur > 60) dur = 60;
+      if (dur > 90) dur = 90;
       showClock(t);
       clockRestoreAt = millis() + (unsigned long)dur * 1000UL;
     } else if (strcmp(cmd, "relay") == 0) {

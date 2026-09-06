@@ -324,7 +324,7 @@ func handleClockAlwaysPower(w http.ResponseWriter, r *http.Request) {
 			st.mu.RUnlock()
 			if on {
 				txt := timeNowWIB()
-				b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 70})
+				b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 65})
 				serialWriteLine(string(b))
 			}
 		}()

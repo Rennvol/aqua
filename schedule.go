@@ -465,8 +465,6 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 		st.mu.RLock()
 		co := st.ClockOn
 		oo := st.OLEDOn
-		st.mu.RUnlock()
-			st.mu.RLock()
 		alw := st.ClockAlwaysOn
 		st.mu.RUnlock()
 		if alw {
