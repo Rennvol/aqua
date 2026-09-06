@@ -466,7 +466,14 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 		co := st.ClockOn
 		oo := st.OLEDOn
 		st.mu.RUnlock()
-		if !co {
+			st.mu.RLock()
+		alw := st.ClockAlwaysOn
+		st.mu.RUnlock()
+		if alw {
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "reason": "already always-on"})
+			return
+		}
+	if !co {
 			json.NewEncoder(w).Encode(map[string]string{"status": "off", "reason": "clock disabled"})
 			return
 		}

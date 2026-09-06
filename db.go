@@ -67,7 +67,7 @@ func migrateFromJSON() {
 		return
 	}
 	// kv fields
-	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r", "poll_interval", "cron_api_key", "cron_token", "public_url", "clock_on", "clock_cron_job_id"} {
+	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r", "poll_interval", "cron_api_key", "cron_token", "public_url", "clock_on", "clock_always_on", "clock_cron_job_id"} {
 		if v, ok := raw[k]; ok {
 			var s string
 			// try string, else number -> string
@@ -187,6 +187,9 @@ func syncSettingsFromDB() {
 	}
 	if v := kvGet("clock_on", ""); v != "" {
 		st.ClockOn = v == "1"
+	}
+	if v := kvGet("clock_always_on", ""); v != "" {
+		st.ClockAlwaysOn = v == "1"
 	}
 	if v := kvGet("clock_cron_job_id", ""); v != "" {
 		var iv int

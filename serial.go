@@ -64,7 +64,11 @@ func serialPushOLED() {
 	st.mu.RLock()
 	on := st.OLEDOn
 	until := st.ClockUntil
+	always := st.ClockAlwaysOn
 	st.mu.RUnlock()
+	if always && on {
+		return // jam terus aktif, jangan timpa
+	}
 	if time.Now().Unix() < until {
 		return // jam besar tampil, push dashboard ditahan
 	}
@@ -100,6 +104,22 @@ func serialPushClock(dur int) {
 		time.Sleep(time.Duration(dur+1) * time.Second)
 		serialPushOLED()
 	}()
+}
+
+// serialClockAlwaysLoop dorong jam terus tiap 60 detik saat mode always aktif.
+func serialClockAlwaysLoop() {
+	for {
+		time.Sleep(60 * time.Second)
+		st.mu.RLock()
+		always := st.ClockAlwaysOn
+		on := st.OLEDOn
+		st.mu.RUnlock()
+		if always && on {
+			txt := time.Now().In(time.FixedZone("WIB", 7*3600)).Format("15:04")
+			b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 70})
+			serialWriteLine(string(b))
+		}
+	}
 }
 
 // serialPushRelay kirim perintah relay ke UNO (demo: lamp -> LED pin13).
@@ -244,6 +264,7 @@ func RunSerial() {
 	}
 	go serialReadLoop()
 	go serialOLEDLoop()
+	go serialClockAlwaysLoop()
 	go watchSerialPresence()
 	RunMock() // tetap jalan sebagai fallback sensor; diam saat serial aktif
 }

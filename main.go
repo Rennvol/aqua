@@ -43,6 +43,7 @@ func main() {
 	mux.HandleFunc("/api/oled", authMW(handleOLED))
 	mux.HandleFunc("/api/oled/power", authMW(handleOLEDPower))
 	mux.HandleFunc("/api/clock/power", authMW(handleClockPower))
+	mux.HandleFunc("/api/clock/always", authMW(handleClockAlwaysPower))
 	mux.HandleFunc("/api/logs", authMW(handleLogs))
 	mux.HandleFunc("/api/settings", authMW(handleSetSettings))
 	mux.HandleFunc("/api/settings/get", authMW(handleGetSettings))
@@ -261,6 +262,10 @@ func handleClockPower(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st.mu.Lock()
+	if req.On && st.ClockAlwaysOn {
+		st.ClockAlwaysOn = false
+		kvSet("clock_always_on", "0")
+	}
 	st.ClockOn = req.On
 	st.mu.Unlock()
 	kvSet("clock_on", map[bool]string{true: "1", false: "0"}[req.On])
@@ -281,6 +286,56 @@ func handleClockPower(w http.ResponseWriter, r *http.Request) {
 		"on":     req.On,
 		"job":    settings.ClockCronJobID,
 	})
+}
+
+// handleClockAlwaysPower ON/OFF jam terus full layar. Saling kunci dengan ClockOn.
+func handleClockAlwaysPower(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
+		return
+	}
+	var req struct {
+		On bool `json:"on"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"error": "bad json"})
+		return
+	}
+	st.mu.Lock()
+	if req.On && st.ClockOn {
+		st.ClockOn = false
+		kvSet("clock_on", "0")
+		_ = pushClockJob(false)
+	}
+	st.ClockAlwaysOn = req.On
+	st.mu.Unlock()
+	kvSet("clock_always_on", map[bool]string{true: "1", false: "0"}[req.On])
+	saveSettings(settings)
+	what := "OFF"
+	if req.On {
+		what = "ON"
+	}
+	addLog(realIP(r), "clock jam-terus: "+what)
+	if req.On {
+		// dorong langsung sekali, loop 60dtk yang lanjutkan
+		go func() {
+			st.mu.RLock()
+			on := st.OLEDOn
+			st.mu.RUnlock()
+			if on {
+				txt := timeNowWIB()
+				b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 70})
+				serialWriteLine(string(b))
+			}
+		}()
+	} else {
+		go serialPushOLED() // balik dashboard
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "on": req.On})
+}
+
+func timeNowWIB() string {
+	return time.Now().In(time.FixedZone("WIB", 7*3600)).Format("15:04")
 }
 
 // clockURL hit-URL publik untuk screensaver jam (1x per jam, ringan).

@@ -16,8 +16,9 @@ type State struct {
 	RelayFan    bool               `json:"relay_fan"`   // legacy
 	OLEDText    string             `json:"oled_text"`
 	OLEDOn      bool               `json:"oled_on"` // false = layar dimatikan (hemat + cegah burn-in)
-	ClockOn     bool               `json:"clock_on"` // screensaver jam besar tiap jam, 10 detik
-	ClockUntil  int64              `json:"-"`        // unix sampai kapan jam tampil; push dashboard ditahan
+	ClockOn        bool               `json:"clock_on"` // screensaver jam besar tiap jam, 10 detik
+	ClockAlwaysOn bool               `json:"clock_always_on"` // jam terus full layar
+	ClockUntil     int64              `json:"-"`        // unix sampai kapan jam tampil; push dashboard ditahan
 	UpdatedAt   int64              `json:"updated_at"`
 	Mode        string             `json:"mode"`
 	HostTemp    float64            `json:"host_temp"`
@@ -57,7 +58,8 @@ func (s *State) snapshot() State {
 		RelayFan:    s.RelayFan,
 		OLEDText:    s.OLEDText,
 		OLEDOn:      s.OLEDOn,
-		ClockOn:     s.ClockOn,
+		ClockOn:        s.ClockOn,
+		ClockAlwaysOn: s.ClockAlwaysOn,
 		UpdatedAt:   s.UpdatedAt,
 		Mode:        s.Mode,
 		HostTemp:    s.HostTemp,
