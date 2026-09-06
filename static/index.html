@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <title>santra — pantau & kontrol</title>
 <style>
-/* Hallmark · pre-emit critique: P4 H5 E4 S5 R4 V4 · macrostructure: Workbench · F3 tabular spec + S2 hanging heads · nav: N9 edge-min · footer: Ft2 inline · contrast: pass (40-41) · tokens: pass (48) · mobile: pass (34,49,50-57) · theme: custom teal-200 OKLCH */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Stat-Led · H4 stat-led knobs: number=tabular-display, qualifier=below, secondary=spec-rows · F3 tabular spec · nav: N8 terminal-command · footer: Ft4 dense colophon · contrast: pass (40-41) · tokens: pass (48) · mobile: pass (34,49,50-57) · theme: custom phosphor-green OKLCH */
 :root{
-  --paper:oklch(13% 0.010 200);--paper-2:oklch(17% 0.012 200);--paper-3:oklch(22% 0.012 200);
-  --ink:oklch(94% 0.008 200);--ink-2:oklch(72% 0.010 200);--rule:oklch(30% 0.012 200);--muted:oklch(58% 0.012 200);
-  --accent:oklch(72% 0.13 200);--accent-ink:oklch(15% 0.01 200);--focus:oklch(78% 0.17 200);
-  --good:oklch(72% 0.15 145);--bad:oklch(68% 0.19 25);
+  --paper:oklch(14% 0.015 110);--paper-2:oklch(18% 0.015 110);--paper-3:oklch(24% 0.015 110);
+  --ink:oklch(93% 0.010 110);--ink-2:oklch(70% 0.020 110);--rule:oklch(32% 0.020 150);--muted:oklch(60% 0.020 110);
+  --accent:oklch(80% 0.200 155);--accent-ink:oklch(16% 0.020 155);--focus:oklch(82% 0.200 155);
+  --good:oklch(78% 0.180 150);--bad:oklch(68% 0.190 25);
   --z-pick:20;--z-toast:30;--z-login:40;
-  --font:"JetBrains Mono","Cascadia Code","Fira Code",ui-monospace,monospace;
-  --font-display:"Space Grotesk","Plus Jakarta Sans",system-ui,sans-serif;
+  --font:"JetBrains Mono","Cascadia Code",ui-monospace,monospace;
+  --font-display:"Bricolage Grotesque","JetBrains Mono",system-ui,sans-serif;
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
   --text-2xs:0.65rem;--text-xs:0.75rem;--text-sm:0.85rem;--text-base:1rem;--text-lg:1.25rem;--text-xl:1.5rem;--text-2xl:2rem;
-  --ease-out:cubic-bezier(0.22,1,0.36,1);--dur-1:120ms;--dur-2:200ms;--dur-3:320ms;--radius:10px;
+  --ease-out:cubic-bezier(0.22,1,0.36,1);--dur-1:120ms;--dur-2:200ms;--dur-3:320ms;--radius:4px;
 }
 [data-theme="light"]{
-  --paper:oklch(98% 0.006 200);--paper-2:oklch(96% 0.008 200);--paper-3:oklch(93% 0.010 200);
-  --ink:oklch(20% 0.012 200);--ink-2:oklch(42% 0.012 200);--rule:oklch(86% 0.010 200);--muted:oklch(52% 0.012 200);
-  --accent:oklch(50% 0.13 200);--accent-ink:oklch(99% 0.005 200);--focus:oklch(48% 0.17 200);
-  --good:oklch(50% 0.15 145);--bad:oklch(55% 0.19 25);
+  --paper:oklch(97% 0.012 110);--paper-2:oklch(94% 0.014 110);--paper-3:oklch(90% 0.016 110);
+  --ink:oklch(20% 0.020 130);--ink-2:oklch(40% 0.025 130);--rule:oklch(80% 0.020 130);--muted:oklch(48% 0.025 130);
+  --accent:oklch(46% 0.150 155);--accent-ink:oklch(98% 0.008 110);--focus:oklch(44% 0.170 155);
+  --good:oklch(46% 0.150 150);--bad:oklch(52% 0.190 25);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:clip}
@@ -32,26 +32,36 @@ a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 ::selection{background:var(--accent);color:var(--accent-ink)}
 .wrap{max-width:900px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-7)}
-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) 0 var(--space-4);border-bottom:1px solid var(--rule);margin-bottom:var(--space-4)}
+header{display:flex;align-items:center;gap:10px;padding:var(--space-3) var(--space-4);border:1px solid var(--rule);border-radius:var(--radius);background:var(--paper-2);margin-bottom:var(--space-4);overflow-x:auto;scrollbar-width:none}header::-webkit-scrollbar{display:none}header::before{content:">";color:var(--accent);font-weight:700}
 /* Workbench: section head hanging di ruang negatif, tanpa rule */
 .sect{margin:0 0 var(--space-6)}
-.sect>.kicker{font-family:var(--font-display);font-size:var(--text-base);font-weight:700;letter-spacing:-0.02em;color:var(--ink);margin-bottom:2px}
-.sect>.lede{font-size:var(--text-xs);color:var(--muted);margin-bottom:var(--space-3)}
+.sect>.kicker{font-family:var(--font-display);font-size:var(--text-xl);font-weight:800;letter-spacing:-0.02em;color:var(--ink);margin-bottom:2px}
+.sect>.lede{font-size:var(--text-sm);color:var(--muted);margin-bottom:var(--space-3)}
+.hero{padding:var(--space-4) 0 var(--space-5);border-bottom:2px solid var(--accent);margin-bottom:var(--space-5)}
+.hero-fig{font-family:var(--font-display);font-weight:800;font-size:clamp(3.5rem,15vw,7rem);line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}
+.hero-fig small{font-size:clamp(1.2rem,4vw,2rem);font-weight:500;color:var(--muted)}
+.hero-qual{font-size:var(--text-sm);color:var(--muted);margin-top:6px}
 /* Workbench: frame bingkai = pembatas antar langkah, bukan kartu-dalam-kartu */
 .bench{border:1px solid var(--rule);border-radius:var(--radius);padding:var(--space-4);background:var(--paper);min-width:0}
 .bench+.bench{margin-top:var(--space-3)}
 .bench>.cap{font-size:var(--text-xs);color:var(--muted);margin-bottom:var(--space-2)}
 .bench>.cap b{color:var(--ink);font-weight:600}
-.logo{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;letter-spacing:-0.03em}.logo .dot{color:var(--accent)}
-.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);padding:4px 10px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2)}
+.logo{font-family:var(--font-display);font-size:var(--text-base);font-weight:800;letter-spacing:-0.02em;white-space:nowrap}.logo .dot{color:var(--accent)}
+.cursor{display:inline-block;width:8px;height:14px;background:var(--accent);vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-xs);padding:4px 0;border:none;background:transparent;color:var(--ink-2);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap}
 .status-pill .led{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background var(--dur-2)}
 .status-pill.on .led{background:var(--good);box-shadow:0 0 6px var(--good)}.status-pill.off .led{background:var(--bad);box-shadow:0 0 6px var(--bad)}
 /* nav tabs */
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;margin-bottom:var(--space-5)}
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:3px;scrollbar-width:none;margin-bottom:var(--space-5);border:1px solid var(--rule);border-radius:var(--radius);background:var(--paper-2);width:max-content;max-width:100%}
 .tabs::-webkit-scrollbar{display:none}
-.tab{appearance:none;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink-2);font-family:var(--font);font-size:var(--text-xs);padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background var(--dur-2),color var(--dur-2),border-color var(--dur-2)}
-.tab.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
-.tab:hover{border-color:var(--accent);color:var(--ink)}
+.tab{appearance:none;border:none;background:transparent;color:var(--ink-2);font-family:var(--font);font-size:var(--text-xs);padding:10px 12px;min-height:44px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:background var(--dur-2),color var(--dur-2)}
+#tabs .tab::before{content:"--";color:var(--muted);margin-right:2px}
+.tab.active{background:var(--accent);color:var(--accent-ink);font-weight:600}
+#tabs .tab.active::before{color:var(--accent-ink)}
+.tab:hover{color:var(--ink)}
+#logFilters .tab{border:1px solid var(--rule);border-radius:999px}
+#logFilters .tab.active{border-color:var(--accent)}
 .view{display:none}.view.active{display:block}
 .grid{display:grid;gap:var(--space-4);grid-template-columns:repeat(12,1fr)}
 .card{background:var(--paper-2);border:1px solid var(--rule);border-radius:var(--radius);padding:var(--space-4);min-width:0}
@@ -66,11 +76,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:var(--s
 .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--ink-2);transition:transform var(--dur-2),background var(--dur-2)}
 .switch:checked{background:var(--accent);border-color:var(--accent)}.switch:checked::after{transform:translateX(22px);background:var(--accent-ink)}
 .switch:disabled{opacity:.4;cursor:not-allowed}
-input[type="text"],input[type="number"],input[type="password"],input[type="time"],textarea,.sel{width:100%;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;font-family:var(--font);font-size:16px;transition:border-color var(--dur-2)}
+input[type="text"],input[type="number"],input[type="password"],input[type="time"],textarea,.sel{width:100%;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:var(--radius);padding:10px 12px;font-family:var(--font);font-size:16px;transition:border-color var(--dur-2)}
 input:focus,textarea:focus,.sel:focus{border-color:var(--accent);outline:2px solid var(--focus);outline-offset:1px}
 textarea{resize:vertical;min-height:64px}
-.btn{appearance:none;border:none;cursor:pointer;border-radius:8px;background:var(--paper-3);color:var(--ink);font-family:var(--font);font-size:var(--text-sm);padding:10px 16px;min-height:44px;transition:transform var(--dur-1) var(--ease-out),background var(--dur-2)}
-.btn:active{transform:translateY(1px)}.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn{appearance:none;cursor:pointer;border-radius:var(--radius);background:transparent;border:1px solid var(--rule);color:var(--ink);font-family:var(--font);font-size:var(--text-sm);padding:10px 16px;min-height:44px;transition:border-color var(--dur-2),background var(--dur-2),transform var(--dur-1) var(--ease-out)}
+.btn:active{transform:translateY(1px)}.btn.primary{border-color:var(--accent);color:var(--accent);font-weight:600}.btn.primary:active{background:var(--accent);color:var(--accent-ink)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .log-list{list-style:none;display:flex;flex-direction:column;gap:var(--space-2);max-height:320px;overflow-y:auto}
 .log-list li{font-size:var(--text-xs);padding:8px 10px;border-radius:6px;background:var(--paper);border:1px solid var(--rule);display:flex;gap:8px;align-items:baseline;overflow-wrap:anywhere}
@@ -82,7 +92,8 @@ textarea{resize:vertical;min-height:64px}
 .sched-table tr:last-child td{border-bottom:none}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:var(--text-2xs);border:1px solid var(--rule);color:var(--muted)}
 .badge.on{color:var(--good);border-color:var(--good)}.badge.off{color:var(--muted)}
-.theme-btn{background:none;border:1px solid var(--rule);color:var(--ink-2);border-radius:999px;min-height:36px;padding:4px 14px;font-size:var(--text-xs);cursor:pointer;font-family:var(--font)}
+.theme-btn{background:none;border:1px solid var(--rule);color:var(--ink-2);border-radius:999px;min-height:36px;padding:4px 14px;font-size:var(--text-xs);cursor:pointer;font-family:var(--font);white-space:nowrap}
+.spec{border-top:2px solid var(--ink)}.spec-row{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);padding:10px 2px;border-bottom:1px solid var(--rule)}.spec-name{font-size:var(--text-sm);color:var(--ink-2)}.spec-val{font-size:var(--text-lg);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}.spec-unit{font-size:var(--text-xs);color:var(--muted);margin-left:4px}.spec-foot{font-size:var(--text-2xs);color:var(--muted);padding-top:8px}
 .theme-btn:hover{border-color:var(--accent);color:var(--ink)}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--paper-3);color:var(--ink);border:1px solid var(--rule);padding:10px 18px;border-radius:999px;font-size:var(--text-sm);opacity:0;pointer-events:none;transition:opacity var(--dur-2),transform var(--dur-2);z-index:var(--z-toast);max-width:90vw}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -114,7 +125,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     <div class="logo">santra<span class="dot">.</span></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="status-pill" id="statusPill"><span class="led"></span><span id="statusText">—</span></span>
-      <button class="theme-btn" id="themeBtn" aria-label="Ganti tema">☾ / ☀</button>
+      <button class="theme-btn" id="themeBtn" aria-label="Ganti tema">tema:…</button>
     </div>
   </header>
 
@@ -129,13 +140,14 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <!-- DASHBOARD : langkah 1 — baca sensor -->
   <div class="view active" id="view-dash">
     <section class="sect" aria-label="Sensor">
-      <div class="kicker">1 · Baca sensor</div>
-      <div class="lede">Angka live dari UNO via serial. Satuan ikut definisi sensor.</div>
-      <div class="bench"><div class="grid" id="sensorGrid"></div></div>
+      <div class="hero" aria-label="Suhu air"><div class="hero-fig" id="heroTemp">—</div><p class="hero-qual">suhu air, live dari UNO via serial. <span id="heroUp">—</span></p></div>
+      <div class="kicker">Sensor</div>
+      <div class="lede">Semua kanal dalam satu tabel spesifikasi.</div>
+      <div class="spec" id="sensorGrid"></div>
     </section>
     <!-- langkah 2 — aksi -->
     <section class="sect" aria-label="Relay dan OLED">
-      <div class="kicker">2 · Atur relay & OLED</div>
+      <div class="kicker">Relay & OLED</div>
       <div class="lede">Toggle relay dorong perintah ke UNO. Teks OLED max 21 char/baris.</div>
       <div class="bench">
         <div class="cap"><b>Relay</b> — kelola label di Settings → Kelola Relay</div>
@@ -155,7 +167,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     </section>
     <!-- langkah 3 — kondisi host -->
     <section class="sect" aria-label="STB Host">
-      <div class="kicker">3 · Cek kondisi STB</div>
+      <div class="kicker">Kondisi STB</div>
       <div class="lede">/proc + thermal_zone0. Di Oracle tampil — (STB = angka).</div>
       <div class="bench">
         <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
@@ -171,7 +183,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <!-- JADWAL : langkah 4 — otomasi via cron-job.org -->
   <div class="view" id="view-jadwal">
     <section class="sect" aria-label="Tambah jadwal">
-      <div class="kicker">4 · Otomasi jadwal</div>
+      <div class="kicker">Otomasi jadwal</div>
       <div class="lede">Waktu Asia/Jakarta · dieksekusi cron-job.org, bukan STB.</div>
       <div class="bench">
       <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;">
@@ -210,7 +222,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <!-- GRAFIK : langkah 5 — riwayat -->
   <div class="view" id="view-grafik">
     <section class="sect" aria-label="Grafik">
-      <div class="kicker">5 · Lihat riwayat</div>
+      <div class="kicker">Riwayat</div>
       <div class="lede">Sample tiap ~2 detik, 600 titik terakhir · refresh 5 detik.</div>
       <div class="bench">
         <div class="cap"><b>Suhu Air (°C)</b> — 20 menit terakhir</div>
@@ -228,7 +240,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <!-- SETTINGS : langkah 6 — konfigurasi -->
   <div class="view" id="view-settings">
     <section class="sect" aria-label="Isi OLED">
-      <div class="kicker">6 · Konfigurasi tampilan</div>
+      <div class="kicker">Tampilan</div>
       <div class="lede">Pilih sumber tiap line OLED (kiri + kanan, max 21 char/baris).</div>
       <div class="bench">
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;" id="oledGrid">
@@ -308,7 +320,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
   <!-- LOG : langkah 7 — jejak -->
   <div class="view" id="view-log">
     <section class="sect" aria-label="Log">
-      <div class="kicker">7 · Jejak aktivitas</div>
+      <div class="kicker">Jejak</div>
       <div class="lede">Filter per kategori. Auto refresh 10 detik.</div>
       <div class="bench">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="logFilters">
@@ -325,7 +337,7 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
     </section>
   </div>
 
-  <footer><span>santra · pantau & kontrol</span><span id="clock">—</span></footer>
+  <footer><span>santra · pantau &amp; kontrol · redesign-hallmark-bento</span><span id="clock">—</span></footer>
 </div>
 <div id="toast" role="status"></div>
 <script>
@@ -349,7 +361,7 @@ $("loginPin").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").cl
 })();
 function initApp(){
 const themeBtn=$("themeBtn");
-function applyTheme(t){document.documentElement.dataset.theme=t;themeBtn.textContent=t==="dark"?"☀":"☾"}
+function applyTheme(t){document.documentElement.dataset.theme=t;themeBtn.textContent="tema:"+t}
 let theme=localStorage.getItem("aqua-theme")||"dark";applyTheme(theme);
 themeBtn.addEventListener("click",()=>{theme=theme==="dark"?"light":"dark";localStorage.setItem("aqua-theme",theme);applyTheme(theme)});
 let toastTimer;function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2500)}
@@ -424,9 +436,15 @@ function render(s){
     // include power if missing but voltage/current exist
     grid.innerHTML=defs.map(d=>{
       const v=sensMap[d.id];
-      const val=(v==null||isNaN(v))?"—": (typeof v==="number"? v.toFixed(d.unit==="°C"||d.id==="temp"?1: d.unit==="W"||d.unit==="V"||d.unit==="A"?1:1): v);
-      return `<div class="card col-3"><h2>${d.icon||""} ${d.label}</h2><div class="big">${val}<span>${d.unit||""}</span></div><div class="meta">update ${up}</div></div>`;
-    }).join("");
+      const val=(v==null||isNaN(v))?"—": (typeof v==="number"? v.toFixed(1): v);
+      return `<div class="spec-row"><span class="spec-name">${d.icon||""} ${d.label}</span><span class="spec-val">${val}<span class="spec-unit">${d.unit||""}</span></span></div>`;
+    }).join("")+`<div class="spec-foot">update ${up} · ${defs.length} sensor</div>`;
+    const _ht=$("heroTemp");
+    if(_ht){
+      const t=sensMap.temp;
+      _ht.innerHTML=(t==null||isNaN(t))?"—":(+t).toFixed(1)+"<small> °C</small>";
+      const _hu=$("heroUp"); if(_hu)_hu.textContent="update "+up;
+    }
   }
   // relays — generic
   const rl=$("relayList");
