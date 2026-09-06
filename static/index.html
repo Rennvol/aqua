@@ -323,11 +323,8 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <input type="text" id="setPublicUrl" placeholder="Domain publik (https://santra.example.com)" style="flex:1;">
           <button class="btn" id="savePublicUrl">Simpan domain</button>
         </div>
-        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
-          <input type="text" id="setOracleTail" placeholder="IP Tailscale Oracle (100.x.x.x)" style="flex:1;">
-          <button class="btn" id="saveOracleTail">Simpan Oracle</button>
-        </div>
         <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:6px;">Kosongkan = auto dari domain yang diakses. Cron hit URL: <code id="cronSampleUrl" style="word-break:break-all;">—</code></p>
+        <p style="font-size:var(--text-2xs);color:var(--muted);">Oracle Tailscale auto dari <code>tailscale status --json</code> (peer bernama oracle).</p>
       </div>
     </section>
   </div>
@@ -514,7 +511,6 @@ async function loadSettings(){
   try{const r=await fetch("/api/settings/get");const s=await r.json();
     if($("setPoll")) $("setPoll").value=s.poll_interval||5;
     if($("setPublicUrl")) $("setPublicUrl").value=s.public_url||"";
-    if($("setOracleTail")) $("setOracleTail").value=s.oracle_tailscale_ip||"";
     if($("cronSampleUrl")) $("cronSampleUrl").textContent=s.public_url? s.public_url + "/api/cron/" + (s.cron_token||"").slice(0,8)+'…/lamp/on' : location.origin + "/api/cron/…";
     // oled lines handled by refreshDefs, but set if already built
     if(_oledOptsBuilt){
@@ -617,10 +613,7 @@ $("savePublicUrl").addEventListener("click",async()=>{
   if(r.ok){toast(url?"Domain disimpan ✓":"Domain di-reset (auto) ✓");loadSettings();}
   else toast("Gagal simpan");
 });
-$("saveOracleTail").addEventListener("click",async()=>{
-  const ip=$("setOracleTail").value.trim();
-  if(ip && !/^\d+\.\d+\.\d+\.\d+$/.test(ip)){toast("Harus 100.x.x.x atau kosong");return}
-  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({oracle_tailscale_ip:ip})});
+
   if(r.ok){toast(ip?"Oracle IP disimpan ✓":"Oracle IP di-reset ✓");loadSettings();fetchState();}
   else toast("Gagal simpan");
 });

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -77,13 +78,11 @@ func updateHostStats() {
 			}
 		}
 	}
-	// network: IP lokal + Tailscale (STB)
 	ipLocal, ipTail := getNetIPs()
 	st.mu.Lock()
 	st.HostIPLocal = ipLocal
 	st.HostIPTail = ipTail
 	st.mu.Unlock()
-	// storage: root "/"
 	var sfs syscall.Statfs_t
 	if err := syscall.Statfs("/", &sfs); err == nil {
 		total := sfs.Blocks * uint64(sfs.Bsize)
@@ -98,10 +97,7 @@ func updateHostStats() {
 		st.HostDiskFree = fmtBytes(free)
 		st.mu.Unlock()
 	}
-	// oracle tailscale IP from settings
-	settings.mu.RLock()
-	ora := settings.OracleTailscaleIP
-	settings.mu.RUnlock()
+	ora := getOracleTail(ipTail)
 	st.mu.Lock()
 	st.HostOracleTail = ora
 	st.mu.Unlock()
@@ -140,7 +136,6 @@ func getNetIPs() (local, tail string) {
 			}
 		}
 	}
-	// fallback: tailscale0 name
 	if tail == "" {
 		if iface, err := net.InterfaceByName("tailscale0"); err == nil {
 			addrs, _ := iface.Addrs()
@@ -155,6 +150,32 @@ func getNetIPs() (local, tail string) {
 		}
 	}
 	return local, tail
+}
+
+func getOracleTail(selfTail string) string {
+	out, err := exec.Command("tailscale", "status", "--json").Output()
+	if err != nil || len(out) == 0 {
+		return ""
+	}
+	var data struct {
+		Peer map[string]struct {
+			HostName     string   `json:"hostName"`
+			DNSName      string   `json:"dnsName"`
+			TailscaleIPs []string `json:"tailscaleIPs"`
+		} `json:"Peer"`
+	}
+	if err := json.Unmarshal(out, &data); err != nil {
+		return ""
+	}
+	for _, pp := range data.Peer {
+		name := strings.ToLower(pp.HostName + " " + pp.DNSName)
+		if strings.Contains(name, "oracle") {
+			if len(pp.TailscaleIPs) > 0 && pp.TailscaleIPs[0] != selfTail {
+				return pp.TailscaleIPs[0]
+			}
+		}
+	}
+	return ""
 }
 
 func fmtBytes(b uint64) string {
@@ -179,8 +200,6 @@ func parseMemKB(line string) int64 {
 	return v
 }
 
-// fmtUptime format ringkas muat 20 char OLED: "3h12m", "2d5h", "45m", "30s".
-// ponytail: tanpa tahun/bulan, uptime STB jarang lewat 30 hari.
 func fmtUptime(sec float64) string {
 	s := int64(sec)
 	if s < 60 {
@@ -199,7 +218,6 @@ func fmtUptime(sec float64) string {
 }
 
 func renderOLEDLine(key string) string {
-	// snapshot under lock, then render without holding lock (avoid nested RLock deadlock)
 	st.mu.RLock()
 	temp := st.Temperature
 	volt := st.Voltage
@@ -326,8 +344,6 @@ func oledLines() [4]string {
 	return [4]string{renderPair(l1, r1), renderPair(l2, r2), renderPair(l3, r3), renderPair(l4, r4)}
 }
 
-// renderPair gabung kiri + kanan jadi 1 baris max 21 runes ("57.0C STB 28.5C").
-// Kanan kosong = mode 1 kolom seperti dulu. Relay dipadatkan (L:/F:) biar muat.
 func renderPair(lKey, rKey string) string {
 	if rKey == "" || rKey == "-" {
 		return fitOLED(renderOLEDLine(lKey))
@@ -354,7 +370,6 @@ func renderPair(lKey, rKey string) string {
 	return string(lr[:keep]) + " " + string(rr)
 }
 
-// relayCompact "lamp:OFF fan:OFF" -> "L:OFF F:OFF" (huruf depan ID kapital).
 func relayCompact() string {
 	settings.mu.RLock()
 	rels := append([]RelayDef(nil), settings.Relays...)
@@ -383,8 +398,6 @@ func relayCompact() string {
 	return strings.Join(parts, " ")
 }
 
-// fitOLED potong per baris max 21 runes (font ncenB08 ~6px/char di 128px).
-// Tanpa ini teks panjang overflow keluar layar (drawStr tak wrap).
 func fitOLED(s string) string {
 	r := []rune(s)
 	if len(r) > 21 {
