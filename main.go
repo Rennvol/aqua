@@ -321,19 +321,14 @@ func handleClockAlwaysPower(w http.ResponseWriter, r *http.Request) {
 	}
 	addLog(realIP(r), "clock jam-terus: "+what)
 	if req.On {
-		// dorong langsung sekali, loop 60dtk yang lanjutkan
-		go func() {
-			st.mu.RLock()
-			on := st.OLEDOn
-			st.mu.RUnlock()
-			if on {
-				txt := timeNowWIB()
-				b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 65})
-				serialWriteLine(string(b))
-			}
-		}()
+		go serialPushClockAlways(true)
 	} else {
-		go serialPushOLED() // balik dashboard
+		go func() {
+			b, _ := json.Marshal(map[string]interface{}{"cmd": "clockAlways", "on": 0})
+			serialWriteLine(string(b))
+			time.Sleep(200 * time.Millisecond)
+			serialPushOLED()
+		}()
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "on": req.On})
 }

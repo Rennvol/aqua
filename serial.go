@@ -81,7 +81,7 @@ func serialPushOLED() {
 }
 
 // serialPushClock tampilkan jam besar (HH:MM WIB) selama dur detik, lalu balik dashboard.
-// Jam ikut STB (UNO tak punya RTC). Anti burn-in: cuma 10 dtk/jam + digit selalu beda.
+// Kirim epoch UTC biar UNO sync detik 00 presisi (soft RTC + DS3231 optional).
 func serialPushClock(dur int) {
 	if dur <= 0 {
 		dur = 10
@@ -94,10 +94,11 @@ func serialPushClock(dur int) {
 		return
 	}
 	txt := time.Now().In(time.FixedZone("WIB", 7*3600)).Format("15:04")
+	epoch := time.Now().Unix()
 	st.mu.Lock()
 	st.ClockUntil = time.Now().Unix() + int64(dur)
 	st.mu.Unlock()
-	b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": dur})
+	b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": dur, "epoch": epoch})
 	serialWriteLine(string(b))
 	// balik dashboard otomatis setelah durasi (+1 dtk jeda)
 	go func() {
@@ -106,28 +107,38 @@ func serialPushClock(dur int) {
 	}()
 }
 
-// serialClockAlwaysLoop dorong jam terus tepat detik 00 tiap menit saat mode always aktif.
+// serialPushClockAlways ON/OFF jam-terus self-tick di UNO (detik 00 presisi, tanpa push per menit).
+func serialPushClockAlways(on bool) {
+	epoch := time.Now().Unix()
+	txt := time.Now().In(time.FixedZone("WIB", 7*3600)).Format("15:04")
+	b, _ := json.Marshal(map[string]interface{}{"cmd": "clockAlways", "on": map[bool]int{true: 1, false: 0}[on], "epoch": epoch, "text": txt})
+	serialWriteLine(string(b))
+}
+
+func serialSyncTime() {
+	b, _ := json.Marshal(map[string]interface{}{"cmd": "sync", "epoch": time.Now().Unix()})
+	serialWriteLine(string(b))
+}
+
+// serialClockAlwaysLoop: push awal jika always aktif, lalu sync periodik biar drift <1s.
+// UNO tick sendiri tiap menit, STB cuma sync. ponytail: sync 30 menit, ganti ke 5 menit jika drift terasa.
 func serialClockAlwaysLoop() {
-	wib := time.FixedZone("WIB", 7*3600)
+	time.Sleep(2 * time.Second)
+	st.mu.RLock()
+	always0 := st.ClockAlwaysOn
+	on0 := st.OLEDOn
+	st.mu.RUnlock()
+	if always0 && on0 {
+		serialPushClockAlways(true)
+	}
 	for {
-		now := time.Now().In(wib)
-		next := now.Truncate(time.Minute).Add(time.Minute)
-		d := next.Sub(now) + 300*time.Millisecond
-		if d < 200*time.Millisecond {
-			d = 200 * time.Millisecond
-		}
-		if d > 70*time.Second {
-			d = 50 * time.Second
-		}
-		time.Sleep(d)
+		time.Sleep(30 * time.Minute)
 		st.mu.RLock()
 		always := st.ClockAlwaysOn
 		on := st.OLEDOn
 		st.mu.RUnlock()
 		if always && on {
-			txt := time.Now().In(wib).Format("15:04")
-			b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 65})
-			serialWriteLine(string(b))
+			serialSyncTime()
 		}
 	}
 }
