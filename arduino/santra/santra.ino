@@ -2,7 +2,7 @@
 // Protokol (1 baris JSON + \n, 9600 baud):
 //   STB -> UNO : {"cmd":"oled","lines":["a","b","c","d"]}  tampil 4 baris
 //   STB -> UNO : {"cmd":"clock","text":"12:34","dur":10}   jam besar 10 dtk
-//   STB -> UNO : {"cmd":"clockAlways","on":1,"epoch":1710000000} jam terus self-tick
+//   STB -> UNO : {"cmd":"clockAlways","on":1,"epoch":1710000000} jam terus self-tick + tanggal WIB
 //   STB -> UNO : {"cmd":"sync","epoch":1710000000}         sync epoch UTC
 //   STB -> UNO : {"cmd":"relay","id":"lamp","on":1}
 // Splash boot = "santra." (bukan random).
@@ -93,10 +93,46 @@ void showClock(const char *t) {
 }
 void showClockFromEpoch(uint32_t epochUTC){
   uint32_t wib = epochUTC + 7*3600UL;
-  uint8_t hh = (wib % 86400UL)/3600;
-  uint8_t mm = (wib % 3600UL)/60;
-  char buf[6]; snprintf(buf,sizeof(buf),"%02u:%02u",hh,mm);
-  showClock(buf);
+  uint32_t days = wib / 86400UL;
+  uint32_t sod = wib % 86400UL;
+  uint8_t hh24 = sod / 3600;
+  uint8_t mm = (sod % 3600) / 60;
+  bool isPM = hh24 >= 12;
+  uint8_t hh12 = hh24 % 12; if(hh12==0) hh12=12;
+  char tbuf[6]; snprintf(tbuf,sizeof(tbuf),"%02u:%02u",hh12,mm);
+  const char *ap = isPM ? "PM" : "AM";
+  // civil date from days (Howard Hinnant)
+  long z = (long)days + 719468;
+  long era = (z >= 0 ? z : z - 146096) / 146097;
+  unsigned doe = (unsigned)(z - era * 146097);
+  unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;
+  int y = (int)(yoe + era * 400);
+  unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);
+  unsigned mp = (5*doy + 2)/153;
+  unsigned d = doy - (153*mp+2)/5 + 1;
+  unsigned mo = mp + (mp < 10 ? 3 : -9);
+  y += (mo <= 2);
+  int wday = (days + 4) % 7; // 0=Min
+  const char *wname[7]={"Ming","Sen","Sel","Rab","Kam","Jum","Sab"};
+  const char *mname[12]={"Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"};
+  char dbuf[24]; snprintf(dbuf,sizeof(dbuf),"%s %02u %s %d",wname[wday],(unsigned)d,mname[mo-1],y);
+  burnShift ^= 2;
+  u8g2.firstPage();
+  do {
+    // jam besar di atas
+    u8g2.setFont(u8g2_font_logisoso32_tr);
+    uint8_t tw = u8g2.getStrWidth(tbuf);
+    int8_t tx = (128 - (int)tw - 14) / 2 + burnShift; // sisakan ruang AM/PM 14px
+    if(tx < 0) tx = burnShift;
+    u8g2.drawStr(tx, 36, tbuf);
+    // AM/PM kecil di kanan jam
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(tx + tw + 3, 28, ap);
+    // tanggal di bawah
+    u8g2.setFont(u8g2_font_6x10_tr);
+    uint8_t dw = u8g2.getStrWidth(dbuf);
+    u8g2.drawStr((128 - dw)/2 + burnShift, 60, dbuf);
+  } while(u8g2.nextPage());
 }
 
 void setup() {
