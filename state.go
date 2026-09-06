@@ -30,6 +30,11 @@ type State struct {
 	HostOracleTail string          `json:"host_oracle_tail"`
 	HostDiskPct float64            `json:"host_disk_pct"`
 	HostDiskFree string            `json:"host_disk_free"`
+	HostCpuPct  float64            `json:"host_cpu_pct"`
+	HostNetIF   string             `json:"host_net_if"`
+	HostNetRx   string             `json:"host_net_rx"`
+	HostNetTx   string             `json:"host_net_tx"`
+	HostModel   string             `json:"host_model"`
 	Relays      map[string]bool    `json:"relays"`  // generic
 	Sensors     map[string]float64 `json:"sensors"` // generic: temp, voltage, current, power, custom
 }
@@ -76,6 +81,11 @@ func (s *State) snapshot() State {
 		HostOracleTail: s.HostOracleTail,
 		HostDiskPct: s.HostDiskPct,
 		HostDiskFree: s.HostDiskFree,
+		HostCpuPct:  s.HostCpuPct,
+		HostNetIF:   s.HostNetIF,
+		HostNetRx:   s.HostNetRx,
+		HostNetTx:   s.HostNetTx,
+		HostModel:   s.HostModel,
 		Relays:      rel,
 		Sensors:     sens,
 	}

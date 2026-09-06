@@ -15,6 +15,10 @@ import (
 
 // host stats — dibaca dari /proc (STB Armbian / Oracle sama), tanpa dep tambahan.
 // ponytail: polling 5s, global fields di st; upgrade ke per-field cache jika butuh.
+var prevCpuTotal, prevCpuIdle uint64
+var prevNetRx, prevNetTx uint64
+var prevNetTime time.Time
+var prevNetIF string
 func hostLoop() {
 	updateHostStats()
 	tick := time.NewTicker(5 * time.Second)
@@ -96,6 +100,92 @@ func updateHostStats() {
 		st.HostDiskPct = pct
 		st.HostDiskFree = fmtBytes(free)
 		st.mu.Unlock()
+	}
+	// cpu % from /proc/stat (delta 5s)
+	if b, err := os.ReadFile("/proc/stat"); err == nil {
+		var total, idle uint64
+		for _, l := range strings.Split(string(b), "\n") {
+			if strings.HasPrefix(l, "cpu ") {
+				f := strings.Fields(l)
+				for i := 1; i < len(f); i++ {
+					v, _ := strconv.ParseUint(f[i], 10, 64)
+					total += v
+					if i == 4 {
+						idle = v
+					}
+				}
+				break
+			}
+		}
+		if prevCpuTotal != 0 && total > prevCpuTotal {
+			dTotal := float64(total - prevCpuTotal)
+			dIdle := float64(idle - prevCpuIdle)
+			pct := (1 - dIdle/dTotal) * 100
+			if pct < 0 { pct = 0 }
+			if pct > 100 { pct = 100 }
+			st.mu.Lock(); st.HostCpuPct = pct; st.mu.Unlock()
+		}
+		prevCpuTotal, prevCpuIdle = total, idle
+	}
+	// net rx/tx rate from /proc/net/dev (pick busiest non-lo iface)
+	if b, err := os.ReadFile("/proc/net/dev"); err == nil {
+		bestIF := ""; var bestRx, bestTx uint64; bestSum := uint64(0)
+		for _, l := range strings.Split(string(b), "\n") {
+			if !strings.Contains(l, ":") { continue }
+			parts := strings.Split(l, ":")
+			if len(parts) != 2 { continue }
+			iface := strings.TrimSpace(parts[0])
+			if iface == "lo" { continue }
+			f := strings.Fields(parts[1])
+			if len(f) < 10 { continue }
+			rx, _ := strconv.ParseUint(f[0], 10, 64)
+			tx, _ := strconv.ParseUint(f[8], 10, 64)
+			if rx+tx > bestSum { bestSum = rx+tx; bestIF = iface; bestRx = rx; bestTx = tx }
+		}
+		if bestIF != "" {
+			now := time.Now()
+			if !prevNetTime.IsZero() && prevNetIF == bestIF {
+				dt := now.Sub(prevNetTime).Seconds()
+				if dt > 0 {
+					rxRate := float64(bestRx-prevNetRx) / dt
+					txRate := float64(bestTx-prevNetTx) / dt
+					// clamp negative (counter reset)
+					if bestRx < prevNetRx { rxRate = 0 }
+					if bestTx < prevNetTx { txRate = 0 }
+					st.mu.Lock()
+					st.HostNetIF = bestIF
+					st.HostNetRx = fmtBytes(uint64(rxRate)) + "/s"
+					st.HostNetTx = fmtBytes(uint64(txRate)) + "/s"
+					st.mu.Unlock()
+				}
+			} else {
+				st.mu.Lock(); st.HostNetIF = bestIF; st.mu.Unlock()
+			}
+			prevNetRx, prevNetTx, prevNetTime, prevNetIF = bestRx, bestTx, now, bestIF
+		}
+	}
+	// host model (STB Armbian) — cache once
+	if st.HostModel == "" {
+		model := ""
+		if b, err := os.ReadFile("/proc/device-tree/model"); err == nil {
+			model = strings.Trim(strings.TrimSpace(string(b)), "\x00")
+		}
+		if model == "" {
+			if b, err := os.ReadFile("/etc/armbian-release"); err == nil {
+				for _, l := range strings.Split(string(b), "\n") {
+					if strings.HasPrefix(l, "BOARD=") { model = strings.Trim(strings.Trim(l[6:], "\" \""), " "); break }
+				}
+			}
+		}
+		if model == "" {
+			if b, err := os.ReadFile("/etc/os-release"); err == nil {
+				for _, l := range strings.Split(string(b), "\n") {
+					if strings.HasPrefix(l, "PRETTY_NAME=") { model = strings.Trim(strings.Trim(l[13:], "\"\""), " "); break }
+				}
+			}
+		}
+		if len(model) > 28 { model = model[:28] }
+		if model != "" { st.mu.Lock(); st.HostModel = model; st.mu.Unlock() }
 	}
 	ora := getOracleTail(ipTail)
 	st.mu.Lock()
@@ -254,6 +344,10 @@ func renderOLEDLine(key string) string {
 	hostOracleTail := st.HostOracleTail
 	hostDiskPct := st.HostDiskPct
 	hostDiskFree := st.HostDiskFree
+	hostCpuPct := st.HostCpuPct
+	hostNetIF := st.HostNetIF
+	hostNetRx := st.HostNetRx
+	_ = st.HostNetTx
 	oledText := st.OLEDText
 	st.mu.RUnlock()
 
@@ -322,6 +416,15 @@ func renderOLEDLine(key string) string {
 			return "- tail VMO"
 		}
 		return hostOracleTail
+	case "stb_cpu":
+		return strconv.FormatFloat(hostCpuPct, 'f', 0, 64) + "% CPU"
+	case "stb_net":
+		if hostNetIF == "" {
+			return "- net"
+		}
+		return hostNetIF + " " + hostNetRx
+	case "stb_model":
+		{ m := st.HostModel; if m == "" { return "- model" }; if len([]rune(m)) > 21 { m = string([]rune(m)[:21]) }; return m }
 	case "stb_disk":
 		if hostDiskFree == "" {
 			return strconv.FormatFloat(hostDiskPct, 'f', 0, 64) + "% disk"

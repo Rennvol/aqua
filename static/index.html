@@ -180,12 +180,19 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         </div>
       </div>
       <div class="bench" style="margin-top:8px">
-        <div class="cap"><b>Jaringan & Storage</b> — IP lokal, Tailscale, disk</div>
+        <div class="cap"><b>Jaringan & Storage</b> — IP lokal, Tailscale, disk · CPU · Net · Model</div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">IP Lokal</div><div id="hostIPLocal" style="font-weight:600;word-break:break-all;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Tailscale STB</div><div id="hostIPTail" style="font-weight:600;word-break:break-all;">—</div></div>
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Tailscale Oracle</div><div id="hostOracleTail" style="font-weight:600;word-break:break-all;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Disk</div><div id="hostDisk" style="font-weight:600;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Disk</div><div id="hostDisk" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">CPU</div><div id="hostCpu" style="font-weight:600;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Net</div><div id="hostNet" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Model</div><div id="hostModel" style="font-weight:600;word-break:break-all;">—</div></div>
+        </div>
+      </div>
+    </section>
+  </div>
         </div>
       </div>
     </section>
@@ -404,7 +411,7 @@ async function refreshDefs(){
     if(rS.ok) _sensors=await rS.json();
     // build oled selects dynamically once
     if(!_oledOptsBuilt && _sensors.length){
-      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"stb_ip_local",label:"IP Lokal"},{id:"stb_ip_tail",label:"IP Tailscale STB"},{id:"oracle_tail",label:"IP Tailscale Oracle"},{id:"stb_disk",label:"Disk STB"},{id:"text",label:"Teks Custom"}];
+      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_cpu",label:"CPU STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"stb_ip_local",label:"IP Lokal"},{id:"stb_ip_tail",label:"IP Tailscale STB"},{id:"oracle_tail",label:"IP Tailscale Oracle"},{id:"stb_disk",label:"Disk STB"},{id:"stb_net",label:"Net STB"},{id:"stb_model",label:"Model STB"},{id:"text",label:"Teks Custom"}];
       const all=[..._sensors, ...extra];
       ["setLine1","setLine1R","setLine2","setLine2R","setLine3","setLine3R","setLine4","setLine4R"].forEach(id=>{
         const sel=$(id); if(!sel) return;
@@ -485,6 +492,9 @@ function render(s){
   if($("hostIPTail")){$("hostIPTail").textContent=s.host_ip_tail||"—"}
   if($("hostOracleTail")){$("hostOracleTail").textContent=s.host_oracle_tail||"—"}
   if($("hostDisk")){$("hostDisk").textContent=s.host_disk_pct!=null? (s.host_disk_pct.toFixed(0)+"% · "+(s.host_disk_free||"")):"—"}
+  if($("hostCpu")){$("hostCpu").textContent=s.host_cpu_pct!=null? s.host_cpu_pct.toFixed(0)+"%":"—"}
+  if($("hostNet")){$("hostNet").textContent=s.host_net_if? (s.host_net_if+" ↓"+(s.host_net_rx||"—")+" ↑"+(s.host_net_tx||"—")):"—"}
+  if($("hostModel")){$("hostModel").textContent=s.host_model||"—"}
   const _oi=$("oledInput");if(_oi&&!_oi.dataset.bound){_oi.dataset.bound="1";_oi.addEventListener("input",()=>{const n=_oi.value.length;const el=$("oledCount");if(el){el.textContent=n+"/84 (max 21/baris × 4 baris)";el.style.color=n>84?"var(--danger)":"var(--muted)"}})}
   const _op=$("oledPowerSw");if(_op){const on=s.oled_on!==false;if(document.activeElement!==_op)_op.checked=on;const _st=$("oledPowerState");if(_st)_st.textContent=on?"ON":"OFF";if(!_op.dataset.bound){_op.dataset.bound="1";_op.addEventListener("change",async(e)=>{e.target.disabled=true;const r=await fetch("/api/oled/power",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:e.target.checked})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!e.target.checked}e.target.disabled=false;fetchState()})}}
   const _ca=$("clockAlwaysSw");if(_ca){const on2=s.clock_always_on===true;if(document.activeElement!==_ca)_ca.checked=on2;const _cs2=$("clockAlwaysState");if(_cs2)_cs2.textContent=on2?"ON":"OFF";if(!_ca.dataset.bound){_ca.dataset.bound="1";_ca.addEventListener("change",async(e)=>{e.target.disabled=true;const want=e.target.checked;const r=await fetch("/api/clock/always",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:want})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!want}e.target.disabled=false;fetchState()})}}
