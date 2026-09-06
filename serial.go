@@ -106,16 +106,26 @@ func serialPushClock(dur int) {
 	}()
 }
 
-// serialClockAlwaysLoop dorong jam terus tiap 60 detik saat mode always aktif.
+// serialClockAlwaysLoop dorong jam terus tepat detik 00 tiap menit saat mode always aktif.
 func serialClockAlwaysLoop() {
+	wib := time.FixedZone("WIB", 7*3600)
 	for {
-		time.Sleep(50 * time.Second)
+		now := time.Now().In(wib)
+		next := now.Truncate(time.Minute).Add(time.Minute)
+		d := next.Sub(now) + 300*time.Millisecond
+		if d < 200*time.Millisecond {
+			d = 200 * time.Millisecond
+		}
+		if d > 70*time.Second {
+			d = 50 * time.Second
+		}
+		time.Sleep(d)
 		st.mu.RLock()
 		always := st.ClockAlwaysOn
 		on := st.OLEDOn
 		st.mu.RUnlock()
 		if always && on {
-			txt := time.Now().In(time.FixedZone("WIB", 7*3600)).Format("15:04")
+			txt := time.Now().In(wib).Format("15:04")
 			b, _ := json.Marshal(map[string]interface{}{"cmd": "clock", "text": txt, "dur": 65})
 			serialWriteLine(string(b))
 		}
