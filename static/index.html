@@ -179,6 +179,15 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Uptime</div><div id="hostUptime" style="font-weight:600;">—</div></div>
         </div>
       </div>
+      <div class="bench" style="margin-top:8px">
+        <div class="cap"><b>Jaringan & Storage</b> — IP lokal, Tailscale, disk</div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">IP Lokal</div><div id="hostIPLocal" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Tailscale STB</div><div id="hostIPTail" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Tailscale Oracle</div><div id="hostOracleTail" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Disk</div><div id="hostDisk" style="font-weight:600;">—</div></div>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -313,6 +322,10 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
           <input type="text" id="setPublicUrl" placeholder="Domain publik (https://santra.example.com)" style="flex:1;">
           <button class="btn" id="savePublicUrl">Simpan domain</button>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+          <input type="text" id="setOracleTail" placeholder="IP Tailscale Oracle (100.x.x.x)" style="flex:1;">
+          <button class="btn" id="saveOracleTail">Simpan Oracle</button>
         </div>
         <p style="font-size:var(--text-2xs);color:var(--muted);margin-top:6px;">Kosongkan = auto dari domain yang diakses. Cron hit URL: <code id="cronSampleUrl" style="word-break:break-all;">—</code></p>
       </div>
@@ -471,6 +484,10 @@ function render(s){
   if($("hostRam")){$("hostRam").textContent=s.host_mem_pct? (s.host_mem_pct.toFixed(0)+" %"):"—"}
   if($("hostLoad")){$("hostLoad").textContent=s.host_load? s.host_load.toFixed(2):"—"}
   if($("hostUptime")){$("hostUptime").textContent=s.host_uptime? fmtUp(s.host_uptime):"—"}
+  if($("hostIPLocal")){$("hostIPLocal").textContent=s.host_ip_local||"—"}
+  if($("hostIPTail")){$("hostIPTail").textContent=s.host_ip_tail||"—"}
+  if($("hostOracleTail")){$("hostOracleTail").textContent=s.host_oracle_tail||"—"}
+  if($("hostDisk")){$("hostDisk").textContent=s.host_disk_pct!=null? (s.host_disk_pct.toFixed(0)+"% · "+(s.host_disk_free||"")):"—"}
   const _oi=$("oledInput");if(_oi&&!_oi.dataset.bound){_oi.dataset.bound="1";_oi.addEventListener("input",()=>{const n=_oi.value.length;const el=$("oledCount");if(el){el.textContent=n+"/84 (max 21/baris × 4 baris)";el.style.color=n>84?"var(--danger)":"var(--muted)"}})}
   const _op=$("oledPowerSw");if(_op){const on=s.oled_on!==false;if(document.activeElement!==_op)_op.checked=on;const _st=$("oledPowerState");if(_st)_st.textContent=on?"ON":"OFF";if(!_op.dataset.bound){_op.dataset.bound="1";_op.addEventListener("change",async(e)=>{e.target.disabled=true;const r=await fetch("/api/oled/power",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:e.target.checked})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!e.target.checked}e.target.disabled=false;fetchState()})}}
   const _ca=$("clockAlwaysSw");if(_ca){const on2=s.clock_always_on===true;if(document.activeElement!==_ca)_ca.checked=on2;const _cs2=$("clockAlwaysState");if(_cs2)_cs2.textContent=on2?"ON":"OFF";if(!_ca.dataset.bound){_ca.dataset.bound="1";_ca.addEventListener("change",async(e)=>{e.target.disabled=true;const want=e.target.checked;const r=await fetch("/api/clock/always",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:want})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!want}e.target.disabled=false;fetchState()})}}
@@ -497,6 +514,7 @@ async function loadSettings(){
   try{const r=await fetch("/api/settings/get");const s=await r.json();
     if($("setPoll")) $("setPoll").value=s.poll_interval||5;
     if($("setPublicUrl")) $("setPublicUrl").value=s.public_url||"";
+    if($("setOracleTail")) $("setOracleTail").value=s.oracle_tailscale_ip||"";
     if($("cronSampleUrl")) $("cronSampleUrl").textContent=s.public_url? s.public_url + "/api/cron/" + (s.cron_token||"").slice(0,8)+'…/lamp/on' : location.origin + "/api/cron/…";
     // oled lines handled by refreshDefs, but set if already built
     if(_oledOptsBuilt){
@@ -597,6 +615,13 @@ $("savePublicUrl").addEventListener("click",async()=>{
   if(url && !/^https?:\/\//.test(url)){toast("Harus https://... atau kosong");return}
   const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({public_url:url})});
   if(r.ok){toast(url?"Domain disimpan ✓":"Domain di-reset (auto) ✓");loadSettings();}
+  else toast("Gagal simpan");
+});
+$("saveOracleTail").addEventListener("click",async()=>{
+  const ip=$("setOracleTail").value.trim();
+  if(ip && !/^\d+\.\d+\.\d+\.\d+$/.test(ip)){toast("Harus 100.x.x.x atau kosong");return}
+  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({oracle_tailscale_ip:ip})});
+  if(r.ok){toast(ip?"Oracle IP disimpan ✓":"Oracle IP di-reset ✓");loadSettings();fetchState();}
   else toast("Gagal simpan");
 });
 // jadwal — tabel

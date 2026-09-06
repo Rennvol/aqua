@@ -25,6 +25,11 @@ type State struct {
 	HostMemPct  float64            `json:"host_mem_pct"`
 	HostLoad    float64            `json:"host_load"`
 	HostUptime  float64            `json:"host_uptime"` // detik sejak boot, dari /proc/uptime
+	HostIPLocal string             `json:"host_ip_local"`
+	HostIPTail  string             `json:"host_ip_tail"`
+	HostOracleTail string          `json:"host_oracle_tail"`
+	HostDiskPct float64            `json:"host_disk_pct"`
+	HostDiskFree string            `json:"host_disk_free"`
 	Relays      map[string]bool    `json:"relays"`  // generic
 	Sensors     map[string]float64 `json:"sensors"` // generic: temp, voltage, current, power, custom
 }
@@ -66,6 +71,11 @@ func (s *State) snapshot() State {
 		HostMemPct:  s.HostMemPct,
 		HostLoad:    s.HostLoad,
 		HostUptime:  s.HostUptime,
+		HostIPLocal: s.HostIPLocal,
+		HostIPTail:  s.HostIPTail,
+		HostOracleTail: s.HostOracleTail,
+		HostDiskPct: s.HostDiskPct,
+		HostDiskFree: s.HostDiskFree,
 		Relays:      rel,
 		Sensors:     sens,
 	}

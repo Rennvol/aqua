@@ -36,6 +36,7 @@ type Settings struct {
 	CronAPIKey   string      `json:"cron_api_key"`
 	CronToken    string      `json:"cron_token"`
 	PublicURL    string      `json:"public_url"`
+	OracleTailscaleIP string `json:"oracle_tailscale_ip"`
 	ClockCronJobID int       `json:"clock_cron_job_id"` // jobId cron-job.org untuk jam per jam
 	Schedules    []Schedule  `json:"schedules"`
 	Relays       []RelayDef  `json:"relays"`
@@ -133,6 +134,7 @@ func dbPersistAll() {
 	kvSet("cron_api_key", settings.CronAPIKey)
 	kvSet("cron_token", settings.CronToken)
 	kvSet("public_url", settings.PublicURL)
+	kvSet("oracle_tailscale_ip", settings.OracleTailscaleIP)
 	kvSet("clock_on", map[bool]string{true: "1", false: "0"}[st.ClockOn])
 	kvSet("clock_always_on", map[bool]string{true: "1", false: "0"}[st.ClockAlwaysOn])
 	kvSet("clock_cron_job_id", fmt.Sprint(settings.ClockCronJobID))
@@ -153,6 +155,7 @@ func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		"oled_line4r":   settings.OLEDLine4R,
 		"poll_interval": settings.PollInterval,
 		"public_url":    settings.PublicURL,
+		"oracle_tailscale_ip": settings.OracleTailscaleIP,
 		"cron_token":    settings.CronToken,
 		"relays":        settings.Relays,
 		"sensors":       settings.Sensors,
@@ -176,6 +179,7 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 		PollInterval *int    `json:"poll_interval"`
 		CronAPIKey   *string `json:"cron_api_key"`
 		PublicURL    *string `json:"public_url"`
+		OracleTailscaleIP *string `json:"oracle_tailscale_ip"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"bad json"}`, 400)
@@ -214,6 +218,9 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.PublicURL != nil {
 		settings.PublicURL = *req.PublicURL
+	}
+	if req.OracleTailscaleIP != nil {
+		settings.OracleTailscaleIP = *req.OracleTailscaleIP
 	}
 	settings.mu.Unlock()
 	saveSettings(settings)

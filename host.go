@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -74,6 +77,97 @@ func updateHostStats() {
 			}
 		}
 	}
+	// network: IP lokal + Tailscale (STB)
+	ipLocal, ipTail := getNetIPs()
+	st.mu.Lock()
+	st.HostIPLocal = ipLocal
+	st.HostIPTail = ipTail
+	st.mu.Unlock()
+	// storage: root "/"
+	var sfs syscall.Statfs_t
+	if err := syscall.Statfs("/", &sfs); err == nil {
+		total := sfs.Blocks * uint64(sfs.Bsize)
+		free := sfs.Bavail * uint64(sfs.Bsize)
+		used := total - free
+		pct := 0.0
+		if total > 0 {
+			pct = float64(used) / float64(total) * 100
+		}
+		st.mu.Lock()
+		st.HostDiskPct = pct
+		st.HostDiskFree = fmtBytes(free)
+		st.mu.Unlock()
+	}
+	// oracle tailscale IP from settings
+	settings.mu.RLock()
+	ora := settings.OracleTailscaleIP
+	settings.mu.RUnlock()
+	st.mu.Lock()
+	st.HostOracleTail = ora
+	st.mu.Unlock()
+}
+
+func getNetIPs() (local, tail string) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", ""
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, _ := iface.Addrs()
+		for _, a := range addrs {
+			ipnet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
+			ip := ipnet.IP.To4()
+			if ip == nil {
+				continue
+			}
+			s := ip.String()
+			if strings.HasPrefix(s, "100.") {
+				if tail == "" {
+					tail = s
+				}
+			} else if strings.HasPrefix(s, "192.168.") || strings.HasPrefix(s, "10.") || strings.HasPrefix(s, "172.") {
+				if local == "" {
+					local = s
+				}
+			} else if local == "" && !strings.HasPrefix(s, "127.") {
+				local = s
+			}
+		}
+	}
+	// fallback: tailscale0 name
+	if tail == "" {
+		if iface, err := net.InterfaceByName("tailscale0"); err == nil {
+			addrs, _ := iface.Addrs()
+			for _, a := range addrs {
+				if ipnet, ok := a.(*net.IPNet); ok {
+					if ip := ipnet.IP.To4(); ip != nil {
+						tail = ip.String()
+						break
+					}
+				}
+			}
+		}
+	}
+	return local, tail
+}
+
+func fmtBytes(b uint64) string {
+	if b >= 1<<30 {
+		return strconv.FormatFloat(float64(b)/(1<<30), 'f', 1, 64) + "GB"
+	}
+	if b >= 1<<20 {
+		return strconv.FormatFloat(float64(b)/(1<<20), 'f', 0, 64) + "MB"
+	}
+	if b >= 1<<10 {
+		return strconv.FormatFloat(float64(b)/(1<<10), 'f', 0, 64) + "KB"
+	}
+	return fmt.Sprint(b) + "B"
 }
 
 func parseMemKB(line string) int64 {
@@ -124,6 +218,11 @@ func renderOLEDLine(key string) string {
 	hostMem := st.HostMemPct
 	hostLoad := st.HostLoad
 	hostUptime := st.HostUptime
+	hostIPLocal := st.HostIPLocal
+	hostIPTail := st.HostIPTail
+	hostOracleTail := st.HostOracleTail
+	hostDiskPct := st.HostDiskPct
+	hostDiskFree := st.HostDiskFree
 	oledText := st.OLEDText
 	st.mu.RUnlock()
 
@@ -177,6 +276,26 @@ func renderOLEDLine(key string) string {
 		return strconv.FormatFloat(hostLoad, 'f', 2, 64) + " load"
 	case "stb_uptime":
 		return fmtUptime(hostUptime)
+	case "stb_ip_local":
+		if hostIPLocal == "" {
+			return "- IP lokal"
+		}
+		return hostIPLocal
+	case "stb_ip_tail":
+		if hostIPTail == "" {
+			return "- tail STB"
+		}
+		return hostIPTail
+	case "oracle_tail":
+		if hostOracleTail == "" {
+			return "- tail VMO"
+		}
+		return hostOracleTail
+	case "stb_disk":
+		if hostDiskFree == "" {
+			return strconv.FormatFloat(hostDiskPct, 'f', 0, 64) + "% disk"
+		}
+		return strconv.FormatFloat(hostDiskPct, 'f', 0, 64) + "% " + hostDiskFree + " free"
 	case "text":
 		if oledText != "" {
 			return oledText
