@@ -614,9 +614,6 @@ $("savePublicUrl").addEventListener("click",async()=>{
   else toast("Gagal simpan");
 });
 
-  if(r.ok){toast(ip?"Oracle IP disimpan ✓":"Oracle IP di-reset ✓");loadSettings();fetchState();}
-  else toast("Gagal simpan");
-});
 // jadwal — tabel
 async function updateCronDomainInfo(){
   try{
