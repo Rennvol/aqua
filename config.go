@@ -36,6 +36,9 @@ type Settings struct {
 	CronAPIKey   string      `json:"cron_api_key"`
 	CronToken    string      `json:"cron_token"`
 	PublicURL    string      `json:"public_url"`
+	EnergyWattLamp int       `json:"energy_watt_lamp"`
+	EnergyWattFan  int       `json:"energy_watt_fan"`
+	EnergyTariff   int       `json:"energy_tariff"`
 	ClockCronJobID int       `json:"clock_cron_job_id"` // jobId cron-job.org untuk jam per jam
 	Schedules    []Schedule  `json:"schedules"`
 	Relays       []RelayDef  `json:"relays"`
@@ -52,6 +55,9 @@ func defaultSettings() *Settings {
 		OLEDLine3:    "voltage",
 		OLEDLine4:    "relay",
 		PollInterval: 5,
+		EnergyWattLamp: 10,
+		EnergyWattFan:  5,
+		EnergyTariff:   1444,
 		Relays: []RelayDef{
 			{ID: "lamp", Label: "Lampu", Icon: "💡"},
 			{ID: "fan", Label: "Kipas", Icon: "🌬️"},
@@ -133,6 +139,9 @@ func dbPersistAll() {
 	kvSet("cron_api_key", settings.CronAPIKey)
 	kvSet("cron_token", settings.CronToken)
 	kvSet("public_url", settings.PublicURL)
+	kvSet("energy_watt_lamp", fmt.Sprint(settings.EnergyWattLamp))
+	kvSet("energy_watt_fan", fmt.Sprint(settings.EnergyWattFan))
+	kvSet("energy_tariff", fmt.Sprint(settings.EnergyTariff))
 	kvSet("clock_on", map[bool]string{true: "1", false: "0"}[st.ClockOn])
 	kvSet("clock_always_on", map[bool]string{true: "1", false: "0"}[st.ClockAlwaysOn])
 	kvSet("clock_cron_job_id", fmt.Sprint(settings.ClockCronJobID))
@@ -153,6 +162,9 @@ func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		"oled_line4r":   settings.OLEDLine4R,
 		"poll_interval": settings.PollInterval,
 		"public_url":    settings.PublicURL,
+		"energy_watt_lamp": settings.EnergyWattLamp,
+		"energy_watt_fan":  settings.EnergyWattFan,
+		"energy_tariff":    settings.EnergyTariff,
 		"cron_token":    settings.CronToken,
 		"relays":        settings.Relays,
 		"sensors":       settings.Sensors,
@@ -176,6 +188,9 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 		PollInterval *int    `json:"poll_interval"`
 		CronAPIKey   *string `json:"cron_api_key"`
 		PublicURL    *string `json:"public_url"`
+		EnergyWattLamp *int    `json:"energy_watt_lamp"`
+		EnergyWattFan  *int    `json:"energy_watt_fan"`
+		EnergyTariff   *int    `json:"energy_tariff"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"bad json"}`, 400)
@@ -212,6 +227,9 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	if req.CronAPIKey != nil {
 		settings.CronAPIKey = *req.CronAPIKey
 	}
+	if req.EnergyWattLamp != nil && *req.EnergyWattLamp >= 0 { settings.EnergyWattLamp = *req.EnergyWattLamp }
+	if req.EnergyWattFan != nil && *req.EnergyWattFan >= 0 { settings.EnergyWattFan = *req.EnergyWattFan }
+	if req.EnergyTariff != nil && *req.EnergyTariff >= 0 { settings.EnergyTariff = *req.EnergyTariff }
 	if req.PublicURL != nil {
 		settings.PublicURL = *req.PublicURL
 	}

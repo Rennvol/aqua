@@ -35,6 +35,10 @@ type State struct {
 	HostNetRx   string             `json:"host_net_rx"`
 	HostNetTx   string             `json:"host_net_tx"`
 	HostModel   string             `json:"host_model"`
+	EnergyTodayKwh float64         `json:"energy_today_kwh"`
+	EnergyMonthKwh float64         `json:"energy_month_kwh"`
+	EnergyCostToday int            `json:"energy_cost_today"`
+	EnergyCostMonth int            `json:"energy_cost_month"`
 	Relays      map[string]bool    `json:"relays"`  // generic
 	Sensors     map[string]float64 `json:"sensors"` // generic: temp, voltage, current, power, custom
 }
@@ -86,6 +90,10 @@ func (s *State) snapshot() State {
 		HostNetRx:   s.HostNetRx,
 		HostNetTx:   s.HostNetTx,
 		HostModel:   s.HostModel,
+		EnergyTodayKwh: s.EnergyTodayKwh,
+		EnergyMonthKwh: s.EnergyMonthKwh,
+		EnergyCostToday: s.EnergyCostToday,
+		EnergyCostMonth: s.EnergyCostMonth,
 		Relays:      rel,
 		Sensors:     sens,
 	}

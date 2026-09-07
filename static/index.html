@@ -191,6 +191,14 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
           <div><div style="color:var(--muted);font-size:var(--text-2xs);">Model</div><div id="hostModel" style="font-weight:600;word-break:break-all;">—</div></div>
         </div>
       </div>
+      <div class="bench" style="margin-top:8px">
+        <div class="cap"><b>Energi</b> — Watt × jam nyala · estimasi 12V tetap, tanpa sensor</div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Hari ini</div><div id="energyToday" style="font-weight:600;">—</div><div style="color:var(--muted);font-size:var(--text-2xs);margin-top:2px;" id="energyTodaySub">—</div></div>
+          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Bulan ini</div><div id="energyMonth" style="font-weight:600;">—</div><div style="color:var(--muted);font-size:var(--text-2xs);margin-top:2px;" id="energyMonthSub">—</div></div>
+        </div>
+        <div style="color:var(--muted);font-size:var(--text-2xs);margin-top:8px;">Estimasi: tarif × kWh. 1 kWh = 1000 Wh. Tanpa PZEM — akurat untuk 12V stack.</div>
+      </div>
     </section>
   </div>
         </div>
@@ -318,6 +326,21 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
         </div>
       </div>
     </section>
+    <section class="sect" aria-label="Energi">
+      <div class="kicker">Energi</div>
+      <div class="lede">Watt tiap relay + tarif PLN — untuk estimasi kWh. 12V stack → kWh = watt × jam nyala.</div>
+      <div class="bench">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+          <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Lampu (W)<input type="number" id="setWattLamp" min="0" max="5000" value="10"></label>
+          <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Kipas (W)<input type="number" id="setWattFan" min="0" max="5000" value="5"></label>
+          <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Tarif (Rp/kWh)<input type="number" id="setTariff" min="0" max="10000" value="1444"></label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+          <span style="font-size:var(--text-2xs);color:var(--muted);">Default: 900VA 1.352 · 1.300/2.200VA 1.444 · R2/R3 1.699. Kosong? Ampere = Watt / 12V — misal 10W = 0,83A.</span>
+          <button class="btn primary" id="saveEnergy" style="margin-left:auto;white-space:nowrap;">Simpan energi</button>
+        </div>
+      </div>
+    </section>
     <section class="sect" aria-label="Cron-job.org">
       <div class="kicker">cron-job.org</div>
       <div class="lede">API key dari console.cron-job.org → Settings.</div>
@@ -411,7 +434,7 @@ async function refreshDefs(){
     if(rS.ok) _sensors=await rS.json();
     // build oled selects dynamically once
     if(!_oledOptsBuilt && _sensors.length){
-      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_cpu",label:"CPU STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"stb_ip_local",label:"IP Lokal"},{id:"stb_ip_tail",label:"IP Tailscale STB"},{id:"oracle_tail",label:"IP Tailscale Oracle"},{id:"stb_disk",label:"Disk STB"},{id:"stb_net",label:"Net STB"},{id:"stb_model",label:"Model STB"},{id:"text",label:"Teks Custom"}];
+      const extra=[{id:"-",label:"— kosong —"},{id:"relay",label:"Status Relay"},{id:"stb_temp",label:"Suhu STB"},{id:"stb_ram",label:"RAM STB"},{id:"stb_cpu",label:"CPU STB"},{id:"stb_load",label:"Load STB"},{id:"stb_uptime",label:"Uptime STB"},{id:"stb_ip_local",label:"IP Lokal"},{id:"stb_ip_tail",label:"IP Tailscale STB"},{id:"oracle_tail",label:"IP Tailscale Oracle"},{id:"stb_disk",label:"Disk STB"},{id:"stb_net",label:"Net STB"},{id:"stb_model",label:"Model STB"},{id:"energy_today",label:"Energi hari ini"},{id:"energy_month",label:"Energi bulan ini"},{id:"text",label:"Teks Custom"}];
       const all=[..._sensors, ...extra];
       ["setLine1","setLine1R","setLine2","setLine2R","setLine3","setLine3R","setLine4","setLine4R"].forEach(id=>{
         const sel=$(id); if(!sel) return;
@@ -495,6 +518,10 @@ function render(s){
   if($("hostCpu")){$("hostCpu").textContent=s.host_cpu_pct!=null? s.host_cpu_pct.toFixed(0)+"%":"—"}
   if($("hostNet")){$("hostNet").textContent=s.host_net_if? (s.host_net_if+" ↓"+(s.host_net_rx||"—")+" ↑"+(s.host_net_tx||"—")):"—"}
   if($("hostModel")){$("hostModel").textContent=s.host_model||"—"}
+  if($("energyToday")){$("energyToday").textContent=s.energy_today_kwh!=null? s.energy_today_kwh.toFixed(2)+" kWh":"—"}
+  if($("energyTodaySub")){$("energyTodaySub").textContent=s.energy_cost_today!=null? "Rp "+Number(s.energy_cost_today).toLocaleString("id-ID")+" · "+(s.energy_today_kwh!=null? (s.energy_today_kwh*1000).toFixed(0)+" Wh":"—"):"—"}
+  if($("energyMonth")){$("energyMonth").textContent=s.energy_month_kwh!=null? s.energy_month_kwh.toFixed(2)+" kWh":"—"}
+  if($("energyMonthSub")){$("energyMonthSub").textContent=s.energy_cost_month!=null? "Rp "+Number(s.energy_cost_month).toLocaleString("id-ID"):"—"}
   const _oi=$("oledInput");if(_oi&&!_oi.dataset.bound){_oi.dataset.bound="1";_oi.addEventListener("input",()=>{const n=_oi.value.length;const el=$("oledCount");if(el){el.textContent=n+"/84 (max 21/baris × 4 baris)";el.style.color=n>84?"var(--danger)":"var(--muted)"}})}
   const _op=$("oledPowerSw");if(_op){const on=s.oled_on!==false;if(document.activeElement!==_op)_op.checked=on;const _st=$("oledPowerState");if(_st)_st.textContent=on?"ON":"OFF";if(!_op.dataset.bound){_op.dataset.bound="1";_op.addEventListener("change",async(e)=>{e.target.disabled=true;const r=await fetch("/api/oled/power",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:e.target.checked})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!e.target.checked}e.target.disabled=false;fetchState()})}}
   const _ca=$("clockAlwaysSw");if(_ca){const on2=s.clock_always_on===true;if(document.activeElement!==_ca)_ca.checked=on2;const _cs2=$("clockAlwaysState");if(_cs2)_cs2.textContent=on2?"ON":"OFF";if(!_ca.dataset.bound){_ca.dataset.bound="1";_ca.addEventListener("change",async(e)=>{e.target.disabled=true;const want=e.target.checked;const r=await fetch("/api/clock/always",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:want})});const d=await r.json().catch(()=>({}));if(!r.ok){toast("Gagal: "+(d.error||r.status));e.target.checked=!want}e.target.disabled=false;fetchState()})}}
@@ -521,6 +548,9 @@ async function loadSettings(){
   try{const r=await fetch("/api/settings/get");const s=await r.json();
     if($("setPoll")) $("setPoll").value=s.poll_interval||5;
     if($("setPublicUrl")) $("setPublicUrl").value=s.public_url||"";
+    if($("setWattLamp")) $("setWattLamp").value=s.energy_watt_lamp!=null?s.energy_watt_lamp:10;
+    if($("setWattFan")) $("setWattFan").value=s.energy_watt_fan!=null?s.energy_watt_fan:5;
+    if($("setTariff")) $("setTariff").value=s.energy_tariff!=null?s.energy_tariff:1444;
     if($("cronSampleUrl")) $("cronSampleUrl").textContent=s.public_url? s.public_url + "/api/cron/" + (s.cron_token||"").slice(0,8)+'…/lamp/on' : location.origin + "/api/cron/…";
     // oled lines handled by refreshDefs, but set if already built
     if(_oledOptsBuilt){
@@ -620,6 +650,11 @@ $("savePublicUrl").addEventListener("click",async()=>{
   // kosong = clear (auto)
   if(url && !/^https?:\/\//.test(url)){toast("Harus https://... atau kosong");return}
   const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({public_url:url})});
+$("saveEnergy")?.addEventListener("click",async()=>{
+  const wl=parseInt($("setWattLamp").value)||0, wf=parseInt($("setWattFan").value)||0, tf=parseInt($("setTariff").value)||0;
+  const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({energy_watt_lamp:wl,energy_watt_fan:wf,energy_tariff:tf})});
+  if(r.ok){toast("Energi disimpan ✓"); fetchState();} else toast("Gagal simpan");
+});
   if(r.ok){toast(url?"Domain disimpan ✓":"Domain di-reset (auto) ✓");loadSettings();}
   else toast("Gagal simpan");
 });

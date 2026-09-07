@@ -25,6 +25,7 @@ func dbInit() {
 		`CREATE TABLE IF NOT EXISTS schedules(id INTEGER PRIMARY KEY, relay TEXT, state TEXT, hour INTEGER, minute INTEGER, enabled INTEGER, cron_job_id INTEGER)`,
 		`CREATE TABLE IF NOT EXISTS history(t INTEGER PRIMARY KEY, temp REAL, power REAL, volt REAL, curr REAL)`,
 		`CREATE TABLE IF NOT EXISTS logs(time TEXT, ip TEXT, action TEXT)`,
+		`CREATE TABLE IF NOT EXISTS energy_daily(date TEXT PRIMARY KEY, wh_lamp REAL, wh_fan REAL)`,
 	}
 	for _, s := range stmts {
 		if _, err := db.Exec(s); err != nil {
@@ -182,6 +183,9 @@ func syncSettingsFromDB() {
 	if v := kvGet("cron_token", ""); true {
 		settings.CronToken = v
 	}
+	if v := kvGet("energy_watt_lamp", ""); v != "" { var iv int; for _, c := range v { if c >= '0' && c <= '9' { iv = iv*10 + int(c-'0') } }; if iv >= 0 { settings.EnergyWattLamp = iv } }
+	if v := kvGet("energy_watt_fan", ""); v != "" { var iv int; for _, c := range v { if c >= '0' && c <= '9' { iv = iv*10 + int(c-'0') } }; if iv >= 0 { settings.EnergyWattFan = iv } }
+	if v := kvGet("energy_tariff", ""); v != "" { var iv int; for _, c := range v { if c >= '0' && c <= '9' { iv = iv*10 + int(c-'0') } }; if iv >= 0 { settings.EnergyTariff = iv } }
 	if v := kvGet("public_url", ""); true {
 		settings.PublicURL = v
 	}

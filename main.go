@@ -61,6 +61,7 @@ func main() {
 	mux.HandleFunc("/api/ingest", authMW(handleIngest))
 
 	go hostLoop()
+	go energyLoop()
 	go RunSerial()
 	ensureToken()
 

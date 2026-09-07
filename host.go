@@ -347,6 +347,10 @@ func renderOLEDLine(key string) string {
 	hostCpuPct := st.HostCpuPct
 	hostNetRx := st.HostNetRx
 	hostNetTx := st.HostNetTx
+	energyTodayKwh := st.EnergyTodayKwh
+	energyMonthKwh := st.EnergyMonthKwh
+	energyCostToday := st.EnergyCostToday
+	energyCostMonth := st.EnergyCostMonth
 	oledText := st.OLEDText
 	st.mu.RUnlock()
 
@@ -430,6 +434,24 @@ func renderOLEDLine(key string) string {
 			return strconv.FormatFloat(hostDiskPct, 'f', 0, 64) + "% disk"
 		}
 		return strconv.FormatFloat(hostDiskPct, 'f', 0, 64) + "% " + hostDiskFree + " free"
+	case "energy_today":
+		if energyTodayKwh == 0 && energyCostToday == 0 {
+			return "- energi hr"
+		}
+		s := fmt.Sprintf("%.2fkWh Rp%d", energyTodayKwh, energyCostToday)
+		if len([]rune(s)) > 21 {
+			s = fmt.Sprintf("%.2fkWh", energyTodayKwh)
+		}
+		return s
+	case "energy_month":
+		if energyMonthKwh == 0 && energyCostMonth == 0 {
+			return "- energi bln"
+		}
+		s := fmt.Sprintf("%.2fkWh Rp%d", energyMonthKwh, energyCostMonth)
+		if len([]rune(s)) > 21 {
+			s = fmt.Sprintf("%.2fkWh", energyMonthKwh)
+		}
+		return s
 	case "text":
 		if oledText != "" {
 			return oledText
