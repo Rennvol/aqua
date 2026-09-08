@@ -477,9 +477,7 @@ func renderOLEDLine(key string) string {
 func oledLines() [4]string {
 	settings.mu.RLock()
 	l1, l2, l3, l4 := settings.OLEDLine1, settings.OLEDLine2, settings.OLEDLine3, settings.OLEDLine4
-	r1, r2, r3, r4 := settings.OLEDLine1R, settings.OLEDLine2R, settings.OLEDLine3R, settings.OLEDLine4R
 	l5, l6, l7, l8 := settings.OLEDLine5, settings.OLEDLine6, settings.OLEDLine7, settings.OLEDLine8
-	r5, r6, r7, r8 := settings.OLEDLine5R, settings.OLEDLine6R, settings.OLEDLine7R, settings.OLEDLine8R
 	custom := settings.OLEDTextCustom
 	settings.mu.RUnlock()
 	if custom != "" {
@@ -488,16 +486,15 @@ func oledLines() [4]string {
 		for i:=0;i<4 && i<len(parts);i++ { out[i]=fitOLED(parts[i]) }
 		return out
 	}
-	hasExtra := l5!="-" && l5!="" || l6!="-" && l6!="" || l7!="-" && l7!="" || l8!="-" && l8!="" || r5!="-" && r5!="" || r6!="-" && r6!="" || r7!="-" && r7!="" || r8!="-" && r8!=""
+	hasExtra := l5!="-" && l5!="" || l6!="-" && l6!="" || l7!="-" && l7!="" || l8!="-" && l8!=""
 	if !hasExtra {
-		return [4]string{renderPair(l1, r1), renderPair(l2, r2), renderPair(l3, r3), renderPair(l4, r4)}
+		return [4]string{fitOLED(renderOLEDLine(l1)), fitOLED(renderOLEDLine(l2)), fitOLED(renderOLEDLine(l3)), fitOLED(renderOLEDLine(l4))}
 	}
-	// ponytail: 8s page toggle, no smooth scroll
 	page := (time.Now().Unix() / 8) % 2
 	if page == 0 {
-		return [4]string{renderPair(l1, r1), renderPair(l2, r2), renderPair(l3, r3), renderPair(l4, r4)}
+		return [4]string{fitOLED(renderOLEDLine(l1)), fitOLED(renderOLEDLine(l2)), fitOLED(renderOLEDLine(l3)), fitOLED(renderOLEDLine(l4))}
 	}
-	return [4]string{renderPair(l5, r5), renderPair(l6, r6), renderPair(l7, r7), renderPair(l8, r8)}
+	return [4]string{fitOLED(renderOLEDLine(l5)), fitOLED(renderOLEDLine(l6)), fitOLED(renderOLEDLine(l7)), fitOLED(renderOLEDLine(l8))}
 }
 
 func renderPair(lKey, rKey string) string {

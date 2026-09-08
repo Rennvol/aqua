@@ -28,18 +28,10 @@ type Settings struct {
 	OLEDLine2    string      `json:"oled_line2"`
 	OLEDLine3    string      `json:"oled_line3"`
 	OLEDLine4    string      `json:"oled_line4"`
-	OLEDLine1R   string      `json:"oled_line1r"`
-	OLEDLine2R   string      `json:"oled_line2r"`
-	OLEDLine3R   string      `json:"oled_line3r"`
-	OLEDLine4R   string      `json:"oled_line4r"`
 	OLEDLine5    string      `json:"oled_line5"`
 	OLEDLine6    string      `json:"oled_line6"`
 	OLEDLine7    string      `json:"oled_line7"`
 	OLEDLine8    string      `json:"oled_line8"`
-	OLEDLine5R   string      `json:"oled_line5r"`
-	OLEDLine6R   string      `json:"oled_line6r"`
-	OLEDLine7R   string      `json:"oled_line7r"`
-	OLEDLine8R   string      `json:"oled_line8r"`
 	OLEDTextCustom string    `json:"oled_text_custom"`
 	PollInterval int         `json:"poll_interval"`
 	CronAPIKey   string      `json:"cron_api_key"`
@@ -144,19 +136,11 @@ func dbPersistAll() {
 	kvSet("oled_line2", settings.OLEDLine2)
 	kvSet("oled_line3", settings.OLEDLine3)
 	kvSet("oled_line4", settings.OLEDLine4)
-	kvSet("oled_line1r", settings.OLEDLine1R)
 	kvSet("oled_line5", settings.OLEDLine5)
 	kvSet("oled_line6", settings.OLEDLine6)
 	kvSet("oled_line7", settings.OLEDLine7)
 	kvSet("oled_line8", settings.OLEDLine8)
-	kvSet("oled_line5r", settings.OLEDLine5R)
-	kvSet("oled_line6r", settings.OLEDLine6R)
-	kvSet("oled_line7r", settings.OLEDLine7R)
-	kvSet("oled_line8r", settings.OLEDLine8R)
 	kvSet("oled_text_custom", settings.OLEDTextCustom)
-	kvSet("oled_line2r", settings.OLEDLine2R)
-	kvSet("oled_line3r", settings.OLEDLine3R)
-	kvSet("oled_line4r", settings.OLEDLine4R)
 	kvSet("poll_interval", fmt.Sprint(settings.PollInterval))
 	kvSet("cron_api_key", settings.CronAPIKey)
 	kvSet("cron_token", settings.CronToken)
@@ -178,18 +162,10 @@ func handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		"oled_line2":    settings.OLEDLine2,
 		"oled_line3":    settings.OLEDLine3,
 		"oled_line4":    settings.OLEDLine4,
-		"oled_line1r":   settings.OLEDLine1R,
-		"oled_line2r":   settings.OLEDLine2R,
-		"oled_line3r":   settings.OLEDLine3R,
-		"oled_line4r":   settings.OLEDLine4R,
 		"oled_line5":    settings.OLEDLine5,
 		"oled_line6":    settings.OLEDLine6,
 		"oled_line7":    settings.OLEDLine7,
 		"oled_line8":    settings.OLEDLine8,
-		"oled_line5r":   settings.OLEDLine5R,
-		"oled_line6r":   settings.OLEDLine6R,
-		"oled_line7r":   settings.OLEDLine7R,
-		"oled_line8r":   settings.OLEDLine8R,
 		"oled_text_custom": settings.OLEDTextCustom,
 		"poll_interval": settings.PollInterval,
 		"public_url":    settings.PublicURL,
@@ -212,18 +188,10 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 		OLEDLine2    *string `json:"oled_line2"`
 		OLEDLine3    *string `json:"oled_line3"`
 		OLEDLine4    *string `json:"oled_line4"`
-		OLEDLine1R   *string `json:"oled_line1r"`
-		OLEDLine2R   *string `json:"oled_line2r"`
-		OLEDLine3R   *string `json:"oled_line3r"`
-		OLEDLine4R   *string `json:"oled_line4r"`
 		OLEDLine5    *string `json:"oled_line5"`
 		OLEDLine6    *string `json:"oled_line6"`
 		OLEDLine7    *string `json:"oled_line7"`
 		OLEDLine8    *string `json:"oled_line8"`
-		OLEDLine5R   *string `json:"oled_line5r"`
-		OLEDLine6R   *string `json:"oled_line6r"`
-		OLEDLine7R   *string `json:"oled_line7r"`
-		OLEDLine8R   *string `json:"oled_line8r"`
 		OLEDTextCustom *string `json:"oled_text_custom"`
 		PollInterval *int    `json:"poll_interval"`
 		CronAPIKey   *string `json:"cron_api_key"`
@@ -249,18 +217,6 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	if req.OLEDLine4 != nil {
 		settings.OLEDLine4 = *req.OLEDLine4
 	}
-	if req.OLEDLine1R != nil {
-		settings.OLEDLine1R = *req.OLEDLine1R
-	}
-	if req.OLEDLine2R != nil {
-		settings.OLEDLine2R = *req.OLEDLine2R
-	}
-	if req.OLEDLine3R != nil {
-		settings.OLEDLine3R = *req.OLEDLine3R
-	}
-	if req.OLEDLine4R != nil {
-		settings.OLEDLine4R = *req.OLEDLine4R
-	}
 	if req.OLEDLine5 != nil {
 		settings.OLEDLine5 = *req.OLEDLine5
 	}
@@ -272,18 +228,6 @@ func handleSetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.OLEDLine8 != nil {
 		settings.OLEDLine8 = *req.OLEDLine8
-	}
-	if req.OLEDLine5R != nil {
-		settings.OLEDLine5R = *req.OLEDLine5R
-	}
-	if req.OLEDLine6R != nil {
-		settings.OLEDLine6R = *req.OLEDLine6R
-	}
-	if req.OLEDLine7R != nil {
-		settings.OLEDLine7R = *req.OLEDLine7R
-	}
-	if req.OLEDLine8R != nil {
-		settings.OLEDLine8R = *req.OLEDLine8R
 	}
 	if req.OLEDTextCustom != nil {
 		settings.OLEDTextCustom = *req.OLEDTextCustom
