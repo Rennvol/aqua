@@ -478,7 +478,14 @@ func oledLines() [4]string {
 	settings.mu.RLock()
 	l1, l2, l3, l4 := settings.OLEDLine1, settings.OLEDLine2, settings.OLEDLine3, settings.OLEDLine4
 	r1, r2, r3, r4 := settings.OLEDLine1R, settings.OLEDLine2R, settings.OLEDLine3R, settings.OLEDLine4R
+	custom := settings.OLEDTextCustom
 	settings.mu.RUnlock()
+	if custom != "" {
+		parts := splitLines(custom)
+		var out [4]string
+		for i:=0;i<4 && i<len(parts);i++ { out[i]=fitOLED(parts[i]) }
+		return out
+	}
 	return [4]string{renderPair(l1, r1), renderPair(l2, r2), renderPair(l3, r3), renderPair(l4, r4)}
 }
 

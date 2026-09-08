@@ -68,7 +68,7 @@ func migrateFromJSON() {
 		return
 	}
 	// kv fields
-	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r", "poll_interval", "cron_api_key", "cron_token", "public_url", "clock_on", "clock_always_on", "clock_cron_job_id"} {
+	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r", "oled_line5", "oled_line6", "oled_line7", "oled_line8", "oled_line5r", "oled_line6r", "oled_line7r", "oled_line8r", "oled_text_custom", "poll_interval", "cron_api_key", "cron_token", "public_url", "clock_on", "clock_always_on", "clock_cron_job_id"} {
 		if v, ok := raw[k]; ok {
 			var s string
 			// try string, else number -> string
@@ -158,7 +158,23 @@ func syncSettingsFromDB() {
 	if v := kvGet("oled_line4", ""); v != "" {
 		settings.OLEDLine4 = v
 	}
-	for i, k := range []string{"oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r"} {
+	if v := kvGet("oled_line5", ""); v != "" {
+		settings.OLEDLine5 = v
+	}
+	if v := kvGet("oled_line6", ""); v != "" {
+		settings.OLEDLine6 = v
+	}
+	if v := kvGet("oled_line7", ""); v != "" {
+		settings.OLEDLine7 = v
+	}
+	if v := kvGet("oled_line8", ""); v != "" {
+		settings.OLEDLine8 = v
+	}
+	if v := kvGet("oled_text_custom", ""); v != "" {
+		settings.OLEDTextCustom = v
+		st.OLEDText = v
+	}
+	for i, k := range []string{"oled_line1r", "oled_line2r", "oled_line3r", "oled_line4r", "oled_line5r", "oled_line6r", "oled_line7r", "oled_line8r"} {
 		if v := kvGet(k, "\x00"); v != "\x00" {
 			switch i {
 			case 0:
