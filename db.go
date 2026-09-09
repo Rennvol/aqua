@@ -68,7 +68,7 @@ func migrateFromJSON() {
 		return
 	}
 	// kv fields
-	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line5", "oled_line6", "oled_line7", "oled_line8", "oled_text_custom", "poll_interval", "cron_api_key", "cron_token", "public_url", "clock_on", "clock_always_on", "clock_cron_job_id"} {
+	for _, k := range []string{"pin", "oled_line1", "oled_line2", "oled_line3", "oled_line4", "oled_line5", "oled_line6", "oled_line7", "oled_line8", "oled_text_custom", "poll_interval", "cron_api_key", "cron_token", "public_url", "clock_on", "clock_always_on", "clock_cron_job_id", "oled_on"} {
 		if v, ok := raw[k]; ok {
 			var s string
 			// try string, else number -> string
@@ -206,6 +206,9 @@ func syncSettingsFromDB() {
 			}
 		}
 		settings.ClockCronJobID = iv
+	}
+	if v := kvGet("oled_on", ""); v != "" {
+		st.OLEDOn = v == "1"
 	}
 	// relays
 	rows, _ := db.Query(`SELECT id,label,icon FROM relays ORDER BY id`)

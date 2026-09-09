@@ -233,6 +233,7 @@ func handleOLEDPower(w http.ResponseWriter, r *http.Request) {
 	st.mu.Lock()
 	st.OLEDOn = req.On
 	st.mu.Unlock()
+	kvSet("oled_on", map[bool]string{true: "1", false: "0"}[req.On])
 
 	what := "OFF"
 	if req.On {
@@ -240,7 +241,11 @@ func handleOLEDPower(w http.ResponseWriter, r *http.Request) {
 	}
 	addLog(realIP(r), "oled power: "+what)
 
-	go serialPushOLED()
+	if req.On && st.ClockAlwaysOn {
+		go serialPushClockAlways(true)
+	} else {
+		go serialPushOLED()
+	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "ok",
 		"on":     req.On,

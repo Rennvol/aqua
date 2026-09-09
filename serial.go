@@ -280,6 +280,21 @@ func RunSerial() {
 		st.Connected = true
 		st.mu.Unlock()
 		log.Println("serial: mode real, UNO tersambung")
+		// ponytail: push awal 1.5s biar UNO siap setelah splash; tanpa ini OLED blank sampai PollInterval
+		go func() {
+			time.Sleep(1500 * time.Millisecond)
+			st.mu.RLock()
+			on := st.OLEDOn
+			always := st.ClockAlwaysOn
+			st.mu.RUnlock()
+			if !on {
+				serialPushOLED() // kirim 4 baris kosong = mati
+			} else if always {
+				serialPushClockAlways(true)
+			} else {
+				serialPushOLED()
+			}
+		}()
 	} else {
 		log.Println("serial: /dev/ttyACM0 tak ada, mode mock")
 	}
@@ -309,7 +324,19 @@ func watchSerialPresence() {
 			st.Connected = true
 			st.mu.Unlock()
 			log.Println("serial: UNO terdeteksi, pindah mode real")
-			serialPushOLED()
+			// push 300ms agar stty 9600 stabil
+			time.Sleep(300 * time.Millisecond)
+			st.mu.RLock()
+			on := st.OLEDOn
+			always := st.ClockAlwaysOn
+			st.mu.RUnlock()
+			if !on {
+				serialPushOLED()
+			} else if always {
+				serialPushClockAlways(true)
+			} else {
+				serialPushOLED()
+			}
 		}
 	}
 }

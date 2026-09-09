@@ -151,6 +151,7 @@ func dbPersistAll() {
 	kvSet("clock_on", map[bool]string{true: "1", false: "0"}[st.ClockOn])
 	kvSet("clock_always_on", map[bool]string{true: "1", false: "0"}[st.ClockAlwaysOn])
 	kvSet("clock_cron_job_id", fmt.Sprint(settings.ClockCronJobID))
+	kvSet("oled_on", map[bool]string{true: "1", false: "0"}[st.OLEDOn])
 }
 
 func handleGetSettings(w http.ResponseWriter, r *http.Request) {
