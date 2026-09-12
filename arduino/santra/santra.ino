@@ -137,6 +137,8 @@ void showClockFromEpoch(uint32_t epochUTC){
 
 void setup() {
   Serial.begin(9600);
+  pinMode(7, OUTPUT); digitalWrite(7, HIGH); // relay CH1 active LOW OFF
+  pinMode(8, OUTPUT); digitalWrite(8, HIGH); // relay CH2 active LOW OFF
   pinMode(13, OUTPUT);
   Wire.begin();
   hasRTC = rtcProbe();
@@ -189,7 +191,10 @@ void loop() {
       if(clockAlwaysMode){ uint32_t ep = nowEpoch(); if(ep){ lastMinute = ep/60UL; showClockFromEpoch(ep);} }
     } else if (strcmp(cmd, "relay") == 0) {
       const char *id = doc["id"]; int on = doc["on"];
-      if (id){ if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(13, on ? HIGH : LOW);} if (strcmp(id, "fan") == 0) fanOn = on; }
+      if (id){
+        if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(7, on ? LOW : HIGH); digitalWrite(13, on ? HIGH : LOW); }
+        if (strcmp(id, "fan") == 0){ fanOn = on; digitalWrite(8, on ? LOW : HIGH); }
+      }
     }
   }
 }
