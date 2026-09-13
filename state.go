@@ -149,6 +149,7 @@ func (s *State) setRelay(which string, on bool) {
 	}
 	s.UpdatedAt = time.Now().Unix()
 	s.mu.Unlock()
+	kvSet("relay_"+which, map[bool]string{true: "1", false: "0"}[on])
 	// dorong ke UNO kalau tersambung (no-op saat mock); async biar HTTP tak nunggu serial
 	go serialPushRelay(which, on)
 	go serialPushOLED()

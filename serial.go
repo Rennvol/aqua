@@ -153,6 +153,19 @@ func serialPushRelay(id string, on bool) {
 	serialWriteLine(string(b))
 }
 
+func serialPushAllRelays() {
+	st.mu.RLock()
+	cp := map[string]bool{}
+	for k, v := range st.Relays {
+		cp[k] = v
+	}
+	st.mu.RUnlock()
+	for id, on := range cp {
+		serialPushRelay(id, on)
+		time.Sleep(80 * time.Millisecond)
+	}
+}
+
 // serialReadLoop baca JSON sensor dari UNO (nanti: {"temp":..,"voltage":..}).
 // Baris non-JSON / rusak diabaikan.
 func serialReadLoop() {
@@ -294,6 +307,7 @@ func RunSerial() {
 			} else {
 				serialPushOLED()
 			}
+			serialPushAllRelays()
 		}()
 	} else {
 		log.Println("serial: /dev/ttyACM0 tak ada, mode mock")
@@ -337,6 +351,7 @@ func watchSerialPresence() {
 			} else {
 				serialPushOLED()
 			}
+			serialPushAllRelays()
 		}
 	}
 }

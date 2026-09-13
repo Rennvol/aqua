@@ -270,8 +270,22 @@ func syncSettingsFromDB() {
 		}
 	}
 	st.mu.Unlock()
+	// restore persisted relay states (mirip oled_on: kv relay_{id}="1"/"0")
+	for _, r := range settings.Relays {
+		if v := kvGet("relay_"+r.ID, ""); v != "" {
+			on := v == "1"
+			st.mu.Lock()
+			st.Relays[r.ID] = on
+			if r.ID == "lamp" {
+				st.RelayLamp = on
+			}
+			if r.ID == "fan" {
+				st.RelayFan = on
+			}
+			st.mu.Unlock()
+		}
+	}
 }
-
 
 func seedDefaults() {
 	var c int
