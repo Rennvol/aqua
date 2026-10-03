@@ -28,7 +28,7 @@ func serialOpen() *os.File {
 			continue
 		}
 		// set baud 9600 raw via stty (stdlib tak bisa set baud sendiri)
-		_ = exec.Command("stty", "-F", dev, "9600", "raw", "-echo").Run()
+		_ = exec.Command("stty", "-F", dev, "9600", "raw", "-echo", "-hupcl").Run()
 		f, err := os.OpenFile(dev, os.O_RDWR, 0600)
 		if err != nil {
 			log.Printf("serial: buka %s gagal: %v", dev, err)
@@ -296,7 +296,7 @@ func RunSerial() {
 		log.Println("serial: mode real, UNO tersambung")
 		// ponytail: push awal 1.5s biar UNO siap setelah splash; tanpa ini OLED blank sampai PollInterval
 		go func() {
-			time.Sleep(2500 * time.Millisecond)
+			time.Sleep(3500 * time.Millisecond)
 			st.mu.RLock()
 			on := st.OLEDOn
 			always := st.ClockAlwaysOn
@@ -310,8 +310,10 @@ func RunSerial() {
 			}
 			st.mu.RLock(); cpLog := map[string]bool{}; for k,v := range st.Relays { cpLog[k]=v }; onLog := st.OLEDOn; st.mu.RUnlock(); log.Printf("serial: boot push relays %v oled_on=%v", cpLog, onLog)
 			serialPushAllRelays()
-			time.Sleep(700 * time.Millisecond)
-			serialPushAllRelays() // retry — UNO splash 1.8s kadang telan push pertama
+			time.Sleep(800 * time.Millisecond)
+			serialPushAllRelays() // retry 2 — bootloader+splash 2.3s kadang telan push pertama
+			time.Sleep(800 * time.Millisecond)
+			serialPushAllRelays() // retry 3 — pastikan sampai
 		}()
 	} else {
 		log.Println("serial: /dev/ttyACM0 tak ada, mode mock")
@@ -343,7 +345,7 @@ func watchSerialPresence() {
 			st.mu.Unlock()
 			log.Println("serial: UNO terdeteksi, pindah mode real")
 			// push 300ms agar stty 9600 stabil
-			time.Sleep(350 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 			st.mu.RLock()
 			on := st.OLEDOn
 			always := st.ClockAlwaysOn
