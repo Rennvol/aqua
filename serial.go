@@ -51,9 +51,19 @@ func serialWriteLine(s string) {
 	}
 	serialFile.SetWriteDeadline(time.Now().Add(2 * time.Second))
 	if _, err := serialFile.WriteString(s + "\n"); err != nil {
-		log.Printf("serial: tulis gagal: %v", err)
+		log.Printf("serial: tulis gagal: %v — coba reconnect", err)
 		serialFile.Close()
 		serialFile = nil
+		serialFile = serialOpen()
+		if serialFile == nil {
+			return
+		}
+		serialFile.SetWriteDeadline(time.Now().Add(2 * time.Second))
+		if _, err2 := serialFile.WriteString(s + "\n"); err2 != nil {
+			log.Printf("serial: retry gagal: %v", err2)
+			serialFile.Close()
+			serialFile = nil
+		}
 	}
 }
 
@@ -333,7 +343,27 @@ func watchSerialPresence() {
 		has := serialFile != nil
 		serialMu.Unlock()
 		if has {
-			continue
+			missing := true
+			for _, dev := range serialCandidates {
+				if _, err := os.Stat(dev); err == nil {
+					missing = false
+					break
+				}
+			}
+			if missing {
+				serialMu.Lock()
+				if serialFile != nil {
+					log.Println("serial: device hilang, reset koneksi")
+					serialFile.Close()
+					serialFile = nil
+				}
+				serialMu.Unlock()
+				st.mu.Lock()
+				st.Connected = false
+				st.mu.Unlock()
+			} else {
+				continue
+			}
 		}
 		f := serialOpen()
 		if f != nil {
@@ -344,7 +374,6 @@ func watchSerialPresence() {
 			st.Connected = true
 			st.mu.Unlock()
 			log.Println("serial: UNO terdeteksi, pindah mode real")
-			// push 300ms agar stty 9600 stabil
 			time.Sleep(500 * time.Millisecond)
 			st.mu.RLock()
 			on := st.OLEDOn
