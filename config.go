@@ -152,9 +152,11 @@ func dbPersistAll() {
 	kvSet("clock_always_on", map[bool]string{true: "1", false: "0"}[st.ClockAlwaysOn])
 	kvSet("clock_cron_job_id", fmt.Sprint(settings.ClockCronJobID))
 	kvSet("oled_on", map[bool]string{true: "1", false: "0"}[st.OLEDOn])
+	st.mu.RLock()
 	for k, v := range st.Relays {
 		kvSet("relay_"+k, map[bool]string{true: "1", false: "0"}[v])
 	}
+	st.mu.RUnlock()
 }
 
 func handleGetSettings(w http.ResponseWriter, r *http.Request) {

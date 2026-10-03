@@ -161,6 +161,7 @@ func serialPushAllRelays() {
 	}
 	st.mu.RUnlock()
 	for id, on := range cp {
+		log.Printf("serial: push relay %s=%v", id, on)
 		serialPushRelay(id, on)
 		time.Sleep(150 * time.Millisecond) // ponytail: stagger hindari inrush 140mA dual ON drop 5V, turun ke 80 jika 5V kuat
 	}
@@ -307,6 +308,7 @@ func RunSerial() {
 			} else {
 				serialPushOLED()
 			}
+			st.mu.RLock(); cpLog := map[string]bool{}; for k,v := range st.Relays { cpLog[k]=v }; onLog := st.OLEDOn; st.mu.RUnlock(); log.Printf("serial: boot push relays %v oled_on=%v", cpLog, onLog)
 			serialPushAllRelays()
 			time.Sleep(700 * time.Millisecond)
 			serialPushAllRelays() // retry — UNO splash 1.8s kadang telan push pertama

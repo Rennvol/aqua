@@ -271,9 +271,11 @@ func syncSettingsFromDB() {
 	}
 	st.mu.Unlock()
 	// restore persisted relay states (mirip oled_on: kv relay_{id}="1"/"0")
+	log.Printf("kv restore: oled_on=%s", kvGet("oled_on", ""))
 	for _, r := range settings.Relays {
 		if v := kvGet("relay_"+r.ID, ""); v != "" {
 			on := v == "1"
+			log.Printf("kv restore: relay_%s=%s -> %v", r.ID, v, on)
 			st.mu.Lock()
 			st.Relays[r.ID] = on
 			if r.ID == "lamp" {
