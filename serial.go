@@ -162,7 +162,7 @@ func serialPushAllRelays() {
 	st.mu.RUnlock()
 	for id, on := range cp {
 		serialPushRelay(id, on)
-		time.Sleep(80 * time.Millisecond)
+		time.Sleep(150 * time.Millisecond) // ponytail: stagger hindari inrush 140mA dual ON drop 5V, turun ke 80 jika 5V kuat
 	}
 }
 
@@ -295,7 +295,7 @@ func RunSerial() {
 		log.Println("serial: mode real, UNO tersambung")
 		// ponytail: push awal 1.5s biar UNO siap setelah splash; tanpa ini OLED blank sampai PollInterval
 		go func() {
-			time.Sleep(1500 * time.Millisecond)
+			time.Sleep(2500 * time.Millisecond)
 			st.mu.RLock()
 			on := st.OLEDOn
 			always := st.ClockAlwaysOn
@@ -308,6 +308,8 @@ func RunSerial() {
 				serialPushOLED()
 			}
 			serialPushAllRelays()
+			time.Sleep(700 * time.Millisecond)
+			serialPushAllRelays() // retry — UNO splash 1.8s kadang telan push pertama
 		}()
 	} else {
 		log.Println("serial: /dev/ttyACM0 tak ada, mode mock")
@@ -339,7 +341,7 @@ func watchSerialPresence() {
 			st.mu.Unlock()
 			log.Println("serial: UNO terdeteksi, pindah mode real")
 			// push 300ms agar stty 9600 stabil
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(350 * time.Millisecond)
 			st.mu.RLock()
 			on := st.OLEDOn
 			always := st.ClockAlwaysOn
