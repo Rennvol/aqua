@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -110,9 +111,12 @@ func migrateFromJSON() {
 			}
 		}
 	}
-	// history/logs jsonl -> db (best-effort, ignore errors)
-	if b, err := os.ReadFile("history.jsonl"); err == nil {
-		for _, line := range splitLines(string(b)) {
+	// history/logs jsonl -> db streaming (ponytail: jangan ReadFile 169M, scanner ring)
+	if f, err := os.Open("history.jsonl"); err == nil {
+		sc := bufio.NewScanner(f)
+		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for sc.Scan() {
+			line := sc.Text()
 			if line == "" {
 				continue
 			}
@@ -121,9 +125,13 @@ func migrateFromJSON() {
 				db.Exec(`INSERT OR IGNORE INTO history(t,temp,power,volt,curr) VALUES(?,?,?,?,?)`, p.T, p.Temp, p.Power, p.Volt, p.Curr)
 			}
 		}
+		f.Close()
 	}
-	if b, err := os.ReadFile("logs.jsonl"); err == nil {
-		for _, line := range splitLines(string(b)) {
+	if f, err := os.Open("logs.jsonl"); err == nil {
+		sc := bufio.NewScanner(f)
+		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for sc.Scan() {
+			line := sc.Text()
 			if line == "" {
 				continue
 			}
@@ -132,6 +140,7 @@ func migrateFromJSON() {
 				db.Exec(`INSERT INTO logs(time,ip,action) VALUES(?,?,?)`, e.Time, e.IP, e.Action)
 			}
 		}
+		f.Close()
 	}
 	// ensure defaults if still empty
 	seedDefaults()

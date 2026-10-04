@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -76,7 +77,6 @@ func handleLogs(w http.ResponseWriter, r *http.Request) {
 			defer rows.Close()
 			var out []LogEntry
 			for rows.Next() { var e LogEntry; rows.Scan(&e.Time, &e.IP, &e.Action); out = append(out, e) }
-			// reverse to chronological for UI (it reverses again, but keep)
 			for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 { out[i], out[j] = out[j], out[i] }
 			json.NewEncoder(w).Encode(out)
 			return
@@ -89,26 +89,46 @@ func handleLogs(w http.ResponseWriter, r *http.Request) {
 	logMu.Lock()
 	defer logMu.Unlock()
 	logFile.Sync()
-	data, err := os.ReadFile(logPath)
+	// ponytail: tail 200 via streaming, jangan ReadFile logs.jsonl besar (OOM sama kayak history)
+	f, err := os.Open(logPath)
 	if err != nil {
 		json.NewEncoder(w).Encode([]LogEntry{})
 		return
 	}
-	// parse all, keep last 200
-	var all []LogEntry
-	for _, line := range splitLines(string(data)) {
+	defer f.Close()
+	// ring 200
+	ring := make([]LogEntry, 200)
+	n, total := 0, 0
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for sc.Scan() {
+		line := sc.Text()
 		if line == "" {
 			continue
 		}
 		var e LogEntry
-		if json.Unmarshal([]byte(line), &e) == nil {
-			all = append(all, e)
+		if json.Unmarshal([]byte(line), &e) != nil {
+			continue
 		}
+		ring[n%200] = e
+		n++
+		total++
 	}
-	if len(all) > 200 {
-		all = all[len(all)-200:]
+	var out []LogEntry
+	if total == 0 {
+		json.NewEncoder(w).Encode(out)
+		return
 	}
-	json.NewEncoder(w).Encode(all)
+	if total < 200 {
+		out = make([]LogEntry, total)
+		copy(out, ring[:total])
+	} else {
+		out = make([]LogEntry, 200)
+		start := n % 200
+		copy(out, ring[start:])
+		copy(out[200-start:], ring[:start])
+	}
+	json.NewEncoder(w).Encode(out)
 }
 
 func splitLines(s string) []string {
