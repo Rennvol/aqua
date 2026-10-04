@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -20,26 +21,58 @@ var (
 	historyMu   sync.Mutex
 	historyData []Point
 	historyPath = "history.jsonl"
-	historyMax  = 600 // ~20 menit @ 2s/sample, cukup buat sparkline; ponytail: ring file jika >10k
+	historyMax  = 600
 )
 
 func init() {
-	// load tail if exists
-	b, err := os.ReadFile(historyPath)
+	// ponytail: streaming tail 600, jangan ReadFile 169M (heap 700M+ -> pm2 400M -> loop restart 10s)
+	f, err := os.Open(historyPath)
 	if err != nil {
 		return
 	}
-	for _, line := range splitLines(string(b)) {
+	defer f.Close()
+	ring := make([]Point, historyMax)
+	n := 0
+	total := 0
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for sc.Scan() {
+		line := sc.Text()
 		if line == "" {
 			continue
 		}
 		var p Point
-		if json.Unmarshal([]byte(line), &p) == nil {
-			historyData = append(historyData, p)
+		if json.Unmarshal([]byte(line), &p) != nil {
+			continue
 		}
+		ring[n%historyMax] = p
+		n++
+		total++
 	}
-	if len(historyData) > historyMax {
-		historyData = historyData[len(historyData)-historyMax:]
+	if total == 0 {
+		return
+	}
+	if total < historyMax {
+		historyData = make([]Point, total)
+		copy(historyData, ring[:total])
+	} else {
+		historyData = make([]Point, historyMax)
+		start := n % historyMax
+		copy(historyData, ring[start:])
+		copy(historyData[historyMax-start:], ring[:start])
+	}
+	if total > historyMax*2 {
+		_ = f.Close()
+		tmp := historyPath + ".tmp"
+		out, err := os.Create(tmp)
+		if err == nil {
+			for _, p := range historyData {
+				b, _ := json.Marshal(p)
+				out.Write(append(b, '\n'))
+			}
+			out.Close()
+			os.Rename(tmp, historyPath)
+		}
 	}
 }
 
@@ -51,13 +84,10 @@ func addHistory(temp, volt, curr float64) {
 		historyData = historyData[len(historyData)-historyMax:]
 	}
 	historyMu.Unlock()
-	// also insert DB
 	if db != nil {
 		db.Exec(`INSERT OR IGNORE INTO history(t,temp,power,volt,curr) VALUES(?,?,?,?,?)`, p.T, p.Temp, p.Power, p.Volt, p.Curr)
-		// prune keep 600
 		db.Exec(`DELETE FROM history WHERE t NOT IN (SELECT t FROM history ORDER BY t DESC LIMIT ?)`, historyMax)
 	}
-	// append file best-effort
 	b, _ := json.Marshal(p)
 	f, err := os.OpenFile(historyPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
@@ -70,7 +100,6 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	historyMu.Lock()
 	defer historyMu.Unlock()
-	// return copy
 	out := make([]Point, len(historyData))
 	copy(out, historyData)
 	json.NewEncoder(w).Encode(out)
