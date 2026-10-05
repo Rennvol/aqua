@@ -26,7 +26,6 @@ func init() {
 
 func main() {
 	dbInit()
-	syncSettingsFromDB()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "30221"

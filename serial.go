@@ -40,13 +40,13 @@ func serialOpen() *os.File {
 	return nil
 }
 
-func serialWriteLine(s string) {
+func serialWriteLine(s string) bool {
 	serialMu.Lock()
 	defer serialMu.Unlock()
 	if serialFile == nil {
 		serialFile = serialOpen()
 		if serialFile == nil {
-			return // tak ada UNO, diam (mock yang jalan)
+			return false // tak ada UNO, diam (mock yang jalan)
 		}
 	}
 	serialFile.SetWriteDeadline(time.Now().Add(2 * time.Second))
@@ -56,15 +56,17 @@ func serialWriteLine(s string) {
 		serialFile = nil
 		serialFile = serialOpen()
 		if serialFile == nil {
-			return
+			return false
 		}
 		serialFile.SetWriteDeadline(time.Now().Add(2 * time.Second))
 		if _, err2 := serialFile.WriteString(s + "\n"); err2 != nil {
 			log.Printf("serial: retry gagal: %v", err2)
 			serialFile.Close()
 			serialFile = nil
+			return false
 		}
 	}
+	return true
 }
 
 // serialPushOLED kirim 4 baris render saat ini ke OLED via UNO.
@@ -160,7 +162,11 @@ func serialPushRelay(id string, on bool) {
 		v = 1
 	}
 	b, _ := json.Marshal(map[string]interface{}{"cmd": "relay", "id": id, "on": v})
-	serialWriteLine(string(b))
+	if !serialWriteLine(string(b)) {
+		log.Printf("serial: relay %s -> %d GAGAL (UNO tak terjangkau)", id, v)
+		return
+	}
+	log.Printf("serial: relay %s -> %d", id, v)
 }
 
 func serialPushAllRelays() {
@@ -171,7 +177,6 @@ func serialPushAllRelays() {
 	}
 	st.mu.RUnlock()
 	for id, on := range cp {
-		log.Printf("serial: push relay %s=%v", id, on)
 		serialPushRelay(id, on)
 		time.Sleep(150 * time.Millisecond) // ponytail: stagger hindari inrush 140mA dual ON drop 5V, turun ke 80 jika 5V kuat
 	}
@@ -210,9 +215,10 @@ func serialReadLoop() {
 				}
 			}
 		}
-		// scanner berhenti = port putus; reset agar reconnect
+		// scanner berhenti = port putus; reset agar reconnect.
+		// ponytail: cek identitas fd — jangan bunuh koneksi baru milik writer.
 		serialMu.Lock()
-		if serialFile != nil {
+		if serialFile != nil && serialFile == f {
 			serialFile.Close()
 			serialFile = nil
 		}
