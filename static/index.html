@@ -532,12 +532,13 @@ function render(s){
 function fmtUp(sec){sec=Math.floor(sec);if(sec<60)return sec+"s up";const m=Math.floor(sec/60);if(m<60)return m+"m up";const h=Math.floor(m/60);if(h<48)return h+"h"+(m%60)+"m";const d=Math.floor(h/24);return d+"d"+(h%24)+"h";}
 async function setRelay(which,on){
   const r=await fetch("/api/relay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay:which,on})});
-  const d=await r.json();if(!r.ok){toast("Gagal: "+(d.error||r.status));return false}return true;
+  const d=await r.json();if(!r.ok){toast("Gagal: "+(d.error||r.status));return false}
+  if(d.ack===false){toast("Relay diam — UNO tak jawab, tekan Reset UNO");return false}return true;
 }
 $("unoReset")?.addEventListener("click",async()=>{
   const btn=$("unoReset");btn.disabled=true;btn.textContent="Reset...";
   try{const r=await fetch("/api/uno/reset",{method:"POST"});const d=await r.json().catch(()=>({}));
-  toast(d.reset?"UNO reset, relay dipulihkan ✓":"Reset gagal, cek kabel USB");}catch(e){toast("Reset gagal")}
+  toast(d.reset?("UNO reset ("+(d.method||"dtr")+"), relay dipulihkan ✓"):"Reset gagal, cek kabel USB");}catch(e){toast("Reset gagal")}
   btn.disabled=false;btn.textContent="↻ Reset UNO";fetchState();
 });
 $("oledSend").addEventListener("click",async()=>{

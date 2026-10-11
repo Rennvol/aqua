@@ -135,7 +135,7 @@ func (s *State) setSensorGeneric(id string, val float64) {
 	s.mu.Unlock()
 }
 
-func (s *State) setRelay(which string, on bool) {
+func (s *State) setRelay(which string, on bool) bool {
 	s.mu.Lock()
 	if s.Relays == nil {
 		s.Relays = map[string]bool{}
@@ -150,9 +150,11 @@ func (s *State) setRelay(which string, on bool) {
 	s.UpdatedAt = time.Now().Unix()
 	s.mu.Unlock()
 	kvSet("relay_"+which, map[bool]string{true: "1", false: "0"}[on])
-	// dorong ke UNO kalau tersambung (no-op saat mock); async biar HTTP tak nunggu serial
-	go serialPushRelay(which, on)
+	// dorong sinkron + tunggu ACK biar web tahu relay fisik benar gerak.
+	// ponytail: blokir max ~2.5s per klik; async-kan lagi kalau scheduler/jadwal ikut lambat.
+	ok := serialPushRelay(which, on)
 	go serialPushOLED()
+	return ok
 }
 
 func (s *State) getRelay(which string) bool {

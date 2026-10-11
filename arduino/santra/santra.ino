@@ -195,6 +195,8 @@ void loop() {
       if (id){
         if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(7, on ? LOW : HIGH); digitalWrite(13, on ? HIGH : LOW); }
         if (strcmp(id, "fan") == 0){ fanOn = on; digitalWrite(8, on ? LOW : HIGH); }
+        // ack: bukti relay fisik sudah digerakkan (STB tunggu ini, tanpa ack = gagal)
+        Serial.print(F("{\"ack\":\"")); Serial.print(id); Serial.print(F("\",\"on\":")); Serial.print(on); Serial.println(F("}"));
       }
     } else if (strcmp(cmd, "reset") == 0) {
       // ponytail: jump ke 0 = soft reset (tak sebersih DTR/power-cycle); cukup untuk hang loop, DTR fallback di STB.

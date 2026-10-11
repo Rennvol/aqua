@@ -169,8 +169,7 @@ func handleRelay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	st.setRelay(req.Relay, req.On)
-
+	ok := st.setRelay(req.Relay, req.On)
 	label := relayLabel(req.Relay)
 	what := "ON"
 	if !req.On {
@@ -182,21 +181,23 @@ func handleRelay(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"relay":  req.Relay,
 		"on":     req.On,
+		"ack":    ok,
 	})
 }
 
-// handleUNOReset: tombol "Reset UNO" di dashboard. Reset via DTR
-// (tanpa cabut kabel), lalu restore semua relay dari state persist.
-// ponytail: blocking ~5s (boot 4s + push), async jika WriteTimeout diketatkan.
+// handleUNOReset: tombol "Reset UNO" di dashboard. DTR reset dulu,
+// kalau UNO masih bisu lanjut power-cycle USB (= cabut-colok software),
+// lalu restore semua relay dari state persist.
+// ponytail: blocking s/d ~15s (power-cycle), spinner di tombol menutupinya.
 func handleUNOReset(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
 		return
 	}
-	ok := serialResetUNO()
-	addLog(realIP(r), fmt.Sprintf("uno reset: %v", ok))
+	method, ok := serialResetUNOHard()
+	addLog(realIP(r), fmt.Sprintf("uno reset: %v (%s)", ok, method))
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "reset": ok})
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "reset": ok, "method": method})
 }
 
 /* ── oled ── */

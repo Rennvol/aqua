@@ -7,6 +7,8 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -17,9 +19,20 @@ import (
 var (
 	serialMu   sync.Mutex
 	serialFile *os.File
-	// serialFailStreak hitung tulis gagal beruntun; watchdog reset UNO saat >= 3.
+	// serialFailStreak hitung gagal beruntun (tulis gagal / tanpa ack);
+	// watchdog power-cycle UNO saat >= 2.
 	serialFailStreak int
+	// serialAckCh terima ack UNO {"ack":"lamp","on":1}; push relay tunggu ini.
+	serialAckCh = make(chan serialAck, 8)
+	// serialAckMu gilirkan tulis+tunggu-ack biar ack tak tertukar antar relay.
+	serialAckMu sync.Mutex
 )
+
+// serialAck pengakuan UNO bahwa relay fisik sudah digerakkan.
+type serialAck struct {
+	id string
+	on bool
+}
 
 var serialCandidates = []string{"/dev/ttyACM0", "/dev/ttyUSB0"}
 
@@ -76,17 +89,17 @@ func serialWriteLine(s string) bool {
 	return true
 }
 
-// serialWatchdog: 3x gagal beruntun = UNO hang → DTR reset sekali,
-// lalu restore relay dari state. Jalan async biar HTTP tak nunggu.
+// serialWatchdog: 2x gagal beruntun = UNO hang → hard reset sekali
+// (DTR, gagal lanjut power-cycle USB), lalu restore relay. Async.
 func serialWatchdog() {
 	serialMu.Lock()
 	n := serialFailStreak
 	serialMu.Unlock()
-	if n < 3 {
+	if n < 2 {
 		return
 	}
-	log.Printf("serial: watchdog %d gagal beruntun → reset UNO", n)
-	if serialResetUNO() {
+	log.Printf("serial: watchdog %d gagal beruntun → hard reset UNO", n)
+	if _, ok := serialResetUNOHard(); ok {
 		serialMu.Lock()
 		serialFailStreak = 0
 		serialMu.Unlock()
@@ -179,18 +192,60 @@ func serialClockAlwaysLoop() {
 	}
 }
 
-// serialPushRelay kirim perintah relay ke UNO (demo: lamp -> LED pin13).
-func serialPushRelay(id string, on bool) {
+// serialPushRelay kirim perintah relay ke UNO dan tunggu ack fisik.
+// Return false = relay BELUM tentu gerak (web harus tampilkan gagal).
+func serialPushRelay(id string, on bool) bool {
+	serialAckMu.Lock()
+	defer serialAckMu.Unlock()
 	v := 0
 	if on {
 		v = 1
 	}
+	// kuras ack basi biar tak salah baca ack perintah lama
+drain:
+	for {
+		select {
+		case <-serialAckCh:
+		default:
+			break drain
+		}
+	}
 	b, _ := json.Marshal(map[string]interface{}{"cmd": "relay", "id": id, "on": v})
 	if !serialWriteLine(string(b)) {
-		log.Printf("serial: relay %s -> %d GAGAL (UNO tak terjangkau)", id, v)
-		return
+		log.Printf("serial: relay %s -> %d GAGAL tulis (UNO tak terjangkau)", id, v)
+		return false
 	}
-	log.Printf("serial: relay %s -> %d", id, v)
+	// tunggu ack UNO max 2.5s; tanpa ack = relay diam walau tulis "sukses"
+	timeout := time.After(2500 * time.Millisecond)
+	for {
+		select {
+		case a := <-serialAckCh:
+			if a.id == id {
+				if a.on == on {
+					serialFailStreak = 0
+					log.Printf("serial: relay %s -> %d ACK ✓", id, v)
+					return true
+				}
+				log.Printf("serial: relay %s ack beda state (minta %d, ack %v)", id, v, a.on)
+				return false
+			}
+			// ack relay lain, simpan balik biar tak hilang
+			select {
+			case serialAckCh <- a:
+			default:
+			}
+		case <-timeout:
+			log.Printf("serial: relay %s -> %d TAK ADA ACK (relay diam!)", id, v)
+			serialMu.Lock()
+			serialFailStreak++
+			n := serialFailStreak
+			serialMu.Unlock()
+			if n >= 2 {
+				go serialWatchdog()
+			}
+			return false
+		}
+	}
 }
 
 func serialPushAllRelays() {
@@ -204,6 +259,62 @@ func serialPushAllRelays() {
 		serialPushRelay(id, on)
 		time.Sleep(150 * time.Millisecond) // ponytail: stagger hindari inrush 140mA dual ON drop 5V, turun ke 80 jika 5V kuat
 	}
+}
+
+// serialPowerCycleUNO matikan port USB 1-1 lalu nyalakan lagi.
+// Setara cabut-colok kabel, tapi via software (butuh root).
+// Dipakai saat DTR reset gagal (UNO bengong total).
+// ponytail: path sysfs bisa beda port; cari otomatis via readlink, fallback 1-1.
+func serialPowerCycleUNO() bool {
+	dev, _ := filepath.EvalSymlinks("/dev/ttyACM0")
+	if dev == "" {
+		dev = "/dev/ttyACM0"
+	}
+	_ = dev
+	auth := "/sys/bus/usb/devices/1-1/authorized"
+	// pastikan ini memang UNO FIREPHX, bukan disk/modem
+	prod, _ := os.ReadFile("/sys/bus/usb/devices/1-1/product")
+	man, _ := os.ReadFile("/sys/bus/usb/devices/1-1/manufacturer")
+	p, m := strings.TrimSpace(string(prod)), strings.TrimSpace(string(man))
+	if !strings.Contains(p, "SER") && !strings.Contains(m, "FIREPHX") {
+		log.Printf("serial: power-cycle batal, 1-1 bukan UNO (%s %s)", m, p)
+		return false
+	}
+	log.Println("serial: power-cycle USB 1-1 (cabut software)...")
+	serialMu.Lock()
+	if serialFile != nil {
+		serialFile.Close()
+		serialFile = nil
+	}
+	serialMu.Unlock()
+	if err := os.WriteFile(auth, []byte("0"), 0644); err != nil {
+		log.Printf("serial: power-cycle off gagal: %v", err)
+		return false
+	}
+	time.Sleep(3000 * time.Millisecond)
+	if err := os.WriteFile(auth, []byte("1"), 0644); err != nil {
+		log.Printf("serial: power-cycle on gagal: %v", err)
+		return false
+	}
+	log.Println("serial: power-cycle on, tunggu UNO boot...")
+	time.Sleep(6000 * time.Millisecond) // enumerasi USB + bootloader + splash
+	serialMu.Lock()
+	serialFile = serialOpen()
+	has := serialFile != nil
+	serialMu.Unlock()
+	if !has {
+		log.Println("serial: power-cycle gagal, UNO tak muncul")
+		return false
+	}
+	st.mu.Lock()
+	st.Connected = true
+	st.mu.Unlock()
+	log.Println("serial: power-cycle OK, restore relay")
+	serialPushOLED()
+	serialPushAllRelays()
+	time.Sleep(800 * time.Millisecond)
+	serialPushAllRelays()
+	return true
 }
 
 // serialResetUNO reset UNO tanpa cabut kabel: tutup port + buka lagi.
@@ -243,6 +354,25 @@ func serialResetUNO() bool {
 	return true
 }
 
+// serialResetUNOHard: DTR reset dulu; kalau masih bisu (tak ada ack),
+// lanjut power-cycle USB = setara cabut-colok, via software.
+func serialResetUNOHard() (string, bool) {
+	if serialResetUNO() {
+		// verifikasi: dorong relay lamp sesuai state, wajib ACK
+		st.mu.RLock()
+		want := st.Relays["lamp"]
+		st.mu.RUnlock()
+		if serialPushRelay("lamp", want) {
+			return "dtr", true
+		}
+		log.Println("serial: DTR reset tapi UNO bisu, lanjut power-cycle")
+	}
+	if serialPowerCycleUNO() {
+		return "powercycle", true
+	}
+	return "gagal", false
+}
+
 // serialReadLoop baca JSON sensor dari UNO (nanti: {"temp":..,"voltage":..}).
 // Baris non-JSON / rusak diabaikan.
 func serialReadLoop() {
@@ -264,6 +394,20 @@ func serialReadLoop() {
 			}
 			var m map[string]json.RawMessage
 			if err := json.Unmarshal([]byte(line), &m); err != nil {
+				continue
+			}
+			// ack UNO: {"ack":"lamp","on":1} — bukti relay fisik gerak
+			if rawID, ok := m["ack"]; ok {
+				var id string
+				var onInt int
+				_ = json.Unmarshal(rawID, &id)
+				if rawOn, ok2 := m["on"]; ok2 {
+					_ = json.Unmarshal(rawOn, &onInt)
+				}
+				select {
+				case serialAckCh <- serialAck{id: id, on: onInt == 1}:
+				default:
+				}
 				continue
 			}
 			if _, ok := m["cmd"]; ok {
