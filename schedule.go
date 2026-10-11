@@ -500,8 +500,22 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	st.setRelay(relay, state == "on")
+	ok := st.setRelay(relay, state == "on")
 	label := relayLabel(relay)
+	// hit_count naik hanya kalau relay fisik benar gerak (ada ACK).
+	if !ok {
+		// UNO bengong tepat saat hit: reset sekali lalu coba ulang sekali.
+		// ponytail: blocking s/d ~25s total, masih di bawah timeout cron 30s.
+		if _, rok := serialResetUNOHard(); rok {
+			ok = st.setRelay(relay, state == "on")
+		}
+	}
+	if !ok {
+		addLog(realIP(r), fmt.Sprintf("auto cron %s: %s GAGAL tanpa ack (sesudah retry)", label, strings.ToUpper(state)))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "no-ack", "relay": relay, "on": state, "ack": false})
+		return
+	}
 	// increment hit_count for matching schedule(s) — best effort: find enabled schedule with same relay+state and bump
 	settings.mu.Lock()
 	for i := range settings.Schedules {
@@ -513,5 +527,5 @@ func handleCron(w http.ResponseWriter, r *http.Request) {
 	settings.mu.Unlock()
 	saveSettings(settings)
 	addLog(realIP(r), fmt.Sprintf("auto cron %s: %s", label, strings.ToUpper(state)))
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "relay": relay, "on": state})
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "relay": relay, "on": state, "ack": true})
 }
