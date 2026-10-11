@@ -5,6 +5,7 @@
 //   STB -> UNO : {"cmd":"clockAlways","on":1,"epoch":1710000000} jam terus self-tick + tanggal WIB
 //   STB -> UNO : {"cmd":"sync","epoch":1710000000}         sync epoch UTC
 //   STB -> UNO : {"cmd":"relay","id":"lamp","on":1}
+//   STB -> UNO : {"cmd":"reset"}  soft reset (tombol Reset UNO di web, tanpa cabut kabel)
 // Splash boot = "santra." (bukan random).
 // Anti burn-in: micro-shift 2px tiap refresh + jam digit selalu beda.
 // Libs: U8g2, ArduinoJson (v7 JsonDocument)
@@ -195,6 +196,9 @@ void loop() {
         if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(7, on ? LOW : HIGH); digitalWrite(13, on ? HIGH : LOW); }
         if (strcmp(id, "fan") == 0){ fanOn = on; digitalWrite(8, on ? LOW : HIGH); }
       }
+    } else if (strcmp(cmd, "reset") == 0) {
+      // ponytail: jump ke 0 = soft reset (tak sebersih DTR/power-cycle); cukup untuk hang loop, DTR fallback di STB.
+      asm volatile ("jmp 0");
     }
   }
 }

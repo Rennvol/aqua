@@ -152,6 +152,8 @@ footer{margin-top:var(--space-7);padding-top:var(--space-4);border-top:1px solid
       <div class="bench">
         <div class="cap"><b>Relay</b> — kelola label di Settings → Kelola Relay</div>
         <div id="relayList"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;"><button class="btn" id="unoReset" style="flex:1;">↻ Reset UNO</button></div>
+        <div style="color:var(--muted);font-size:var(--text-2xs);margin-top:4px;">Reset tanpa cabut kabel, relay balik ke posisi terakhir otomatis.</div>
       </div>
       <div class="bench">
         <div class="cap"><b>OLED</b> — kirim teks + preview line 1–4 sesuai Settings</div>
@@ -532,6 +534,12 @@ async function setRelay(which,on){
   const r=await fetch("/api/relay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({relay:which,on})});
   const d=await r.json();if(!r.ok){toast("Gagal: "+(d.error||r.status));return false}return true;
 }
+$("unoReset")?.addEventListener("click",async()=>{
+  const btn=$("unoReset");btn.disabled=true;btn.textContent="Reset...";
+  try{const r=await fetch("/api/uno/reset",{method:"POST"});const d=await r.json().catch(()=>({}));
+  toast(d.reset?"UNO reset, relay dipulihkan ✓":"Reset gagal, cek kabel USB");}catch(e){toast("Reset gagal")}
+  btn.disabled=false;btn.textContent="↻ Reset UNO";fetchState();
+});
 $("oledSend").addEventListener("click",async()=>{
   const text=$("oledInput").value.trim();if(!text){toast("Teks kosong");return}
   const btn=$("oledSend");btn.disabled=true;

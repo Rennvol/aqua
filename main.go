@@ -40,6 +40,7 @@ func main() {
 	// protected (PIN)
 	mux.HandleFunc("/api/state", authMW(handleState))
 	mux.HandleFunc("/api/relay", authMW(handleRelay))
+	mux.HandleFunc("/api/uno/reset", authMW(handleUNOReset))
 	mux.HandleFunc("/api/oled", authMW(handleOLED))
 	mux.HandleFunc("/api/oled/power", authMW(handleOLEDPower))
 	mux.HandleFunc("/api/clock/power", authMW(handleClockPower))
@@ -182,6 +183,20 @@ func handleRelay(w http.ResponseWriter, r *http.Request) {
 		"relay":  req.Relay,
 		"on":     req.On,
 	})
+}
+
+// handleUNOReset: tombol "Reset UNO" di dashboard. Reset via DTR
+// (tanpa cabut kabel), lalu restore semua relay dari state persist.
+// ponytail: blocking ~5s (boot 4s + push), async jika WriteTimeout diketatkan.
+func handleUNOReset(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
+		return
+	}
+	ok := serialResetUNO()
+	addLog(realIP(r), fmt.Sprintf("uno reset: %v", ok))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "reset": ok})
 }
 
 /* ── oled ── */

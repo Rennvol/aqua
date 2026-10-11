@@ -17,6 +17,8 @@ import (
 var (
 	serialMu   sync.Mutex
 	serialFile *os.File
+	// serialFailStreak hitung tulis gagal beruntun; watchdog reset UNO saat >= 3.
+	serialFailStreak int
 )
 
 var serialCandidates = []string{"/dev/ttyACM0", "/dev/ttyUSB0"}
@@ -56,6 +58,8 @@ func serialWriteLine(s string) bool {
 		serialFile = nil
 		serialFile = serialOpen()
 		if serialFile == nil {
+			serialFailStreak++
+			go serialWatchdog()
 			return false
 		}
 		serialFile.SetWriteDeadline(time.Now().Add(2 * time.Second))
@@ -63,10 +67,30 @@ func serialWriteLine(s string) bool {
 			log.Printf("serial: retry gagal: %v", err2)
 			serialFile.Close()
 			serialFile = nil
+			serialFailStreak++
+			go serialWatchdog()
 			return false
 		}
 	}
+	serialFailStreak = 0
 	return true
+}
+
+// serialWatchdog: 3x gagal beruntun = UNO hang → DTR reset sekali,
+// lalu restore relay dari state. Jalan async biar HTTP tak nunggu.
+func serialWatchdog() {
+	serialMu.Lock()
+	n := serialFailStreak
+	serialMu.Unlock()
+	if n < 3 {
+		return
+	}
+	log.Printf("serial: watchdog %d gagal beruntun → reset UNO", n)
+	if serialResetUNO() {
+		serialMu.Lock()
+		serialFailStreak = 0
+		serialMu.Unlock()
+	}
 }
 
 // serialPushOLED kirim 4 baris render saat ini ke OLED via UNO.
@@ -180,6 +204,43 @@ func serialPushAllRelays() {
 		serialPushRelay(id, on)
 		time.Sleep(150 * time.Millisecond) // ponytail: stagger hindari inrush 140mA dual ON drop 5V, turun ke 80 jika 5V kuat
 	}
+}
+
+// serialResetUNO reset UNO tanpa cabut kabel: tutup port + buka lagi.
+// Buka port toggle DTR → UNO auto-reset via bootloader; tunggu
+// bootloader+splash (~4s) lalu dorong ulang semua relay dari state (persist kv).
+// ponytail: sleep blocking 5s di handler HTTP, pindah async jika WriteTimeout diketatkan.
+func serialResetUNO() bool {
+	b, _ := json.Marshal(map[string]string{"cmd": "reset"})
+	serialWriteLine(string(b)) // coba soft reset dulu (butuh sketch baru); gagal pun lanjut DTR reset
+	serialMu.Lock()
+	if serialFile != nil {
+		serialFile.Close()
+		serialFile = nil
+	}
+	serialMu.Unlock()
+	log.Println("serial: reset UNO, tunggu boot...")
+	time.Sleep(4000 * time.Millisecond) // bootloader ~2s + splash 1.8s
+	serialMu.Lock()
+	serialFile = serialOpen()
+	has := serialFile != nil
+	serialMu.Unlock()
+	if !has {
+		log.Println("serial: reset gagal, UNO tak muncul")
+		st.mu.Lock()
+		st.Connected = false
+		st.mu.Unlock()
+		return false
+	}
+	st.mu.Lock()
+	st.Connected = true
+	st.mu.Unlock()
+	log.Println("serial: UNO reset OK, restore relay")
+	serialPushOLED()
+	serialPushAllRelays()
+	time.Sleep(800 * time.Millisecond)
+	serialPushAllRelays() // retry 2 — pastikan sampai setelah splash
+	return true
 }
 
 // serialReadLoop baca JSON sensor dari UNO (nanti: {"temp":..,"voltage":..}).
