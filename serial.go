@@ -266,21 +266,25 @@ func serialPushAllRelays() {
 // Dipakai saat DTR reset gagal (UNO bengong total).
 // ponytail: path sysfs bisa beda port; cari otomatis via readlink, fallback 1-1.
 func serialPowerCycleUNO() bool {
-	dev, _ := filepath.EvalSymlinks("/dev/ttyACM0")
-	if dev == "" {
-		dev = "/dev/ttyACM0"
+	// Cari direktori sysfs milik ttyACM0 otomatis, fallback 1-1.
+	// Hanya device itu yang di-authorized 0/1 — port lain (mis. daya Mikrotik) tak tersentuh.
+	usbdir := "/sys/bus/usb/devices/1-1"
+	if link, err := filepath.EvalSymlinks("/sys/class/tty/ttyACM0/device"); err == nil {
+		// link = .../1-1:1.0 → naik 1 level = .../1-1
+		if dir := filepath.Dir(link); filepath.Base(dir) != "usb1" {
+			usbdir = dir
+		}
 	}
-	_ = dev
-	auth := "/sys/bus/usb/devices/1-1/authorized"
+	auth := usbdir + "/authorized"
 	// pastikan ini memang UNO FIREPHX, bukan disk/modem
-	prod, _ := os.ReadFile("/sys/bus/usb/devices/1-1/product")
-	man, _ := os.ReadFile("/sys/bus/usb/devices/1-1/manufacturer")
+	prod, _ := os.ReadFile(usbdir + "/product")
+	man, _ := os.ReadFile(usbdir + "/manufacturer")
 	p, m := strings.TrimSpace(string(prod)), strings.TrimSpace(string(man))
 	if !strings.Contains(p, "SER") && !strings.Contains(m, "FIREPHX") {
-		log.Printf("serial: power-cycle batal, 1-1 bukan UNO (%s %s)", m, p)
+		log.Printf("serial: power-cycle batal, %s bukan UNO (%s %s)", usbdir, m, p)
 		return false
 	}
-	log.Println("serial: power-cycle USB 1-1 (cabut software)...")
+	log.Printf("serial: power-cycle USB %s (cabut software)...", usbdir)
 	serialMu.Lock()
 	if serialFile != nil {
 		serialFile.Close()
