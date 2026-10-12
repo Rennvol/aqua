@@ -81,6 +81,7 @@ func main() {
 	}
 
 	go func() {
+		signal.Ignore(syscall.SIGHUP) // hangup ctty (USB UNO dicabut) jangan bunuh proses
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 		<-sig

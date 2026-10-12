@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -44,11 +45,16 @@ func serialOpen() *os.File {
 		}
 		// set baud 9600 raw via stty (stdlib tak bisa set baud sendiri)
 		_ = exec.Command("stty", "-F", dev, "9600", "raw", "-echo", "-hupcl").Run()
-		f, err := os.OpenFile(dev, os.O_RDWR, 0600)
+		// O_NOCTTY: UNO jangan jadi controlling terminal. Tanpa ini, proses
+		// session-leader mengakuisisi ttyACM0 sebagai ctty; tiap power-cycle/
+		// cabut → kernel kirim SIGHUP → proses mati di tengah jalan (sebelum
+		// tulis authorized=1) → USB tertinggal mati + jadwal miss.
+		fd, err := syscall.Open(dev, os.O_RDWR|syscall.O_NOCTTY, 0600)
 		if err != nil {
 			log.Printf("serial: buka %s gagal: %v", dev, err)
 			continue
 		}
+		f := os.NewFile(uintptr(fd), dev)
 		log.Printf("serial: tersambung %s @9600", dev)
 		return f
 	}
