@@ -47,7 +47,19 @@ func serialFindDevices() []string {
 	found := []string{}
 	for _, pat := range []string{"/dev/ttyACM*", "/dev/ttyUSB*"} {
 		ms, _ := filepath.Glob(pat)
-		found = append(found, ms...)
+		for _, d := range ms {
+			// Wajib char device + ada di sysfs: echo ke port yang sedang
+			// hilang meninggalkan file biasa /dev/ttyACM1 — open+write ke
+			// file selalu "sukses" tapi UNO tak terima, ACK mati selamanya.
+			fi, err := os.Stat(d)
+			if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
+				continue
+			}
+			if _, err := os.Stat("/sys/class/tty/" + filepath.Base(d)); err != nil {
+				continue
+			}
+			found = append(found, d)
+		}
 	}
 	sort.Strings(found)
 	// ACM0 tetap prioritas pertama bila ada
