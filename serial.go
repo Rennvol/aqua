@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -35,11 +36,36 @@ type serialAck struct {
 	on bool
 }
 
-var serialCandidates = []string{"/dev/ttyACM0", "/dev/ttyUSB0"}
+var serialCandidates = []string{"/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyUSB0"}
+
+// serialFindDevices cari semua port serial USB yang ada, urut stabil.
+// ACM0 duluan bila ada (jalur utama), sisanya ACM1..n lalu USB.
+// Tanpa ini, UNO yang pindah ACM0->ACM1 (power-cycle/enumerasi ulang)
+// tak pernah ditemukan: open cengkram ACM0 mati, tulis ditelan CDC-ACM,
+// relay diam + TAK ADA ACK selamanya sampai restart manual.
+func serialFindDevices() []string {
+	found := []string{}
+	for _, pat := range []string{"/dev/ttyACM*", "/dev/ttyUSB*"} {
+		ms, _ := filepath.Glob(pat)
+		found = append(found, ms...)
+	}
+	sort.Strings(found)
+	// ACM0 tetap prioritas pertama bila ada
+	for i, d := range found {
+		if d == "/dev/ttyACM0" && i != 0 {
+			found[0], found[i] = found[i], found[0]
+			break
+		}
+	}
+	if len(found) == 0 {
+		found = serialCandidates
+	}
+	return found
+}
 
 // serialOpen buka port pertama yang ada. Return nil kalau tak ada (caller fallback mock).
 func serialOpen() *os.File {
-	for _, dev := range serialCandidates {
+	for _, dev := range serialFindDevices() {
 		if _, err := os.Stat(dev); err != nil {
 			continue
 		}
@@ -564,26 +590,31 @@ func watchSerialPresence() {
 		has := serialFile != nil
 		serialMu.Unlock()
 		if has {
-			missing := true
-			for _, dev := range serialCandidates {
-				if _, err := os.Stat(dev); err == nil {
-					missing = false
-					break
-				}
+			serialMu.Lock()
+			cur := ""
+			if serialFile != nil {
+				cur = serialFile.Name()
 			}
-			if missing {
-				serialMu.Lock()
-				if serialFile != nil {
-					log.Println("serial: device hilang, reset koneksi")
-					serialFile.Close()
-					serialFile = nil
+			serialMu.Unlock()
+			// cek port yang sedang dipegang, bukan daftar kandidat:
+			// UNO pindah ACM0->ACM1 = ACM0 hilang walau ACM1 ada.
+			// Kode lama cek "ada kandidat apapun" -> missing=false -> continue
+			// selamanya cengkram fd mati. Tulis ditelan CDC-ACM, TAK ADA ACK.
+			if cur != "" {
+				if _, err := os.Stat(cur); err != nil {
+					serialMu.Lock()
+					if serialFile != nil && serialFile.Name() == cur {
+						log.Printf("serial: device %s hilang, reset koneksi", cur)
+						serialFile.Close()
+						serialFile = nil
+					}
+					serialMu.Unlock()
+					st.mu.Lock()
+					st.Connected = false
+					st.mu.Unlock()
+				} else {
+					continue
 				}
-				serialMu.Unlock()
-				st.mu.Lock()
-				st.Connected = false
-				st.mu.Unlock()
-			} else {
-				continue
 			}
 		}
 		f := serialOpen()
