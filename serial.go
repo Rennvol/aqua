@@ -34,7 +34,15 @@ var (
 	serialAckMu sync.Mutex
 	// serialWatchdogAt cooldown: jangan hard reset tiap push gagal.
 	// Tanpa ini 10 jadwal gagal = 10 reset beruntun, USB naik-turun terus.
+	// 300s: power-cycle software 15:53→15:54 bikin enumerasi USB gagal
+	// (error -71, unable to enumerate) sampai /dev/ttyACM* hilang total.
+	// Reset agresif = bumerang: UNO goyah di level listrik, bukan sketch.
 	serialWatchdogAt int64
+	// serialPowerCycleAt cooldown khusus power-cycle USB (15 menit):
+	// cabut-colok software berisiko bikin kernel tak bisa enum ulang.
+	// DTR reset boleh tiap 5 mnt, power-cycle hanya kalau DTR gagal
+	// beruntun + jeda 15 mnt terlampaui.
+	serialPowerCycleAt int64
 )
 
 // serialAck pengakuan UNO bahwa relay fisik sudah digerakkan.
@@ -153,12 +161,13 @@ func serialWatchdog() {
 	if n < 2 {
 		return
 	}
-	// cooldown 60s: reset terakhir < 1 menit lalu = skip. Hard reset butuh
+	// cooldown 300s: reset terakhir < 5 menit lalu = skip. Hard reset butuh
 	// ~15s (DTR 4s / power-cycle 9s); tanpa jeda, push jadwal berikutnya
 	// picu reset lagi sebelum UNO selesai boot → reset bertumpuk, USB
-	// pindah ACM0→ACM1→ACM2 terus.
+	// pindah ACM0→ACM1→ACM2 terus. 60s TERBUKTI kurang: log 15:53
+	// watchdog→DTR→power-cycle→enum gagal→16:00 USB hilang total.
 	now := time.Now().Unix()
-	if last := atomic.LoadInt64(&serialWatchdogAt); now-last < 60 {
+	if last := atomic.LoadInt64(&serialWatchdogAt); now-last < 300 {
 		return
 	}
 	atomic.StoreInt64(&serialWatchdogAt, now)
@@ -255,7 +264,9 @@ func serialClockAlwaysLoop() {
 }
 
 // serialPushRelay kirim perintah relay ke UNO dan tunggu ack fisik.
-// Return false = relay BELUM tentu gerak (web harus tampilkan gagal).
+// Coba 2x dalam satu kunci giliran: miss tunggal (ack basi/tabrak
+// boot-push/splash telan) sembuh sendiri tanpa watchdog. Return false =
+// relay BELUM tentu gerak (web harus tampilkan gagal).
 func serialPushRelay(id string, on bool) bool {
 	serialAckMu.Lock()
 	defer serialAckMu.Unlock()
@@ -263,47 +274,57 @@ func serialPushRelay(id string, on bool) bool {
 	if on {
 		v = 1
 	}
-	// kuras ack basi biar tak salah baca ack perintah lama
-drain:
-	for {
-		select {
-		case <-serialAckCh:
-		default:
-			break drain
-		}
-	}
 	b, _ := json.Marshal(map[string]interface{}{"cmd": "relay", "id": id, "on": v})
-	if !serialWriteLine(string(b)) {
-		log.Printf("serial: relay %s -> %d GAGAL tulis (UNO tak terjangkau)", id, v)
-		return false
-	}
-	// tunggu ack UNO max 2.5s; tanpa ack = relay diam walau tulis "sukses"
-	timeout := time.After(2500 * time.Millisecond)
-	for {
-		select {
-		case a := <-serialAckCh:
-			if a.id == id {
-				if a.on == on {
-					atomic.StoreInt32(&serialFailStreak, 0)
-					log.Printf("serial: relay %s -> %d ACK ✓", id, v)
-					return true
-				}
-				log.Printf("serial: relay %s ack beda state (minta %d, ack %v)", id, v, a.on)
-				return false
-			}
-			// ack relay lain, simpan balik biar tak hilang
+	for attempt := 0; attempt < 2; attempt++ {
+		// kuras ack basi biar tak salah baca ack perintah lama
+	drain:
+		for {
 			select {
-			case serialAckCh <- a:
+			case <-serialAckCh:
 			default:
+				break drain
 			}
-		case <-timeout:
-			log.Printf("serial: relay %s -> %d TAK ADA ACK (relay diam!)", id, v)
-			if atomic.AddInt32(&serialFailStreak, 1) >= 2 {
-				go serialWatchdog()
-			}
+		}
+		if !serialWriteLine(string(b)) {
+			log.Printf("serial: relay %s -> %d GAGAL tulis (UNO tak terjangkau)", id, v)
 			return false
 		}
+		// tunggu ack UNO max 4s; tanpa ack = relay diam walau tulis "sukses".
+		// 2.5s terlalu mepet setelah reset: bootloader ~2s + splash 1.8s
+		// telan push pertama (log 15:46:08 & 16:05:30 selalu miss pertama).
+		timeout := time.After(4000 * time.Millisecond)
+		for {
+			select {
+			case a := <-serialAckCh:
+				if a.id == id {
+					if a.on == on {
+						atomic.StoreInt32(&serialFailStreak, 0)
+						log.Printf("serial: relay %s -> %d ACK ✓", id, v)
+						return true
+					}
+					log.Printf("serial: relay %s ack beda state (minta %d, ack %v)", id, v, a.on)
+					return false
+				}
+				// ack relay lain, simpan balik biar tak hilang
+				select {
+				case serialAckCh <- a:
+				default:
+				}
+			case <-timeout:
+				if attempt == 0 {
+					log.Printf("serial: relay %s -> %d miss 1x, coba lagi", id, v)
+					time.Sleep(300 * time.Millisecond)
+					break // keluar wait-loop, lanjut attempt 2
+				}
+				log.Printf("serial: relay %s -> %d TAK ADA ACK (relay diam!)", id, v)
+				if atomic.AddInt32(&serialFailStreak, 1) >= 2 {
+					go serialWatchdog()
+				}
+				return false
+			}
+		}
 	}
+	return false
 }
 
 func serialPushAllRelays() {
@@ -446,7 +467,10 @@ func serialResetUNO() bool {
 }
 
 // serialResetUNOHard: DTR reset dulu; kalau masih bisu (tak ada ack),
-// lanjut power-cycle USB = setara cabut-colok, via software.
+// lanjut power-cycle USB = setara cabut-colok, via software — TAPI
+// hanya jika cooldown 15 menit terlampaui. Power-cycle 15:53 bikin
+// enumerasi USB gagal total (error -71) sampai ttyACM* hilang 16:00.
+// Tanpa gate ini, watchdog agresif = bumerang listrik.
 func serialResetUNOHard() (string, bool) {
 	if serialResetUNO() {
 		// verifikasi: dorong relay lamp sesuai state, wajib ACK
@@ -458,6 +482,12 @@ func serialResetUNOHard() (string, bool) {
 		}
 		log.Println("serial: DTR reset tapi UNO bisu, lanjut power-cycle")
 	}
+	now := time.Now().Unix()
+	if last := atomic.LoadInt64(&serialPowerCycleAt); now-last < 900 {
+		log.Printf("serial: power-cycle skip (cooldown 15 mnt, sisa %ds)", 900-(now-last))
+		return "gagal", false
+	}
+	atomic.StoreInt64(&serialPowerCycleAt, now)
 	if serialPowerCycleUNO() {
 		return "powercycle", true
 	}
@@ -681,7 +711,10 @@ func watchSerialPresence() {
 			st.Connected = true
 			st.mu.Unlock()
 			log.Println("serial: UNO terdeteksi, pindah mode real")
-			time.Sleep(500 * time.Millisecond)
+			// settle 4s: bootloader ~2s + splash 1.8s telan push pertama
+			// (log 15:46:08 & 16:05:30 selalu miss push ke-1). Tanpa jeda,
+			// reconnect-push tabrakan window boot = TAK ADA ACK palsu.
+			time.Sleep(4000 * time.Millisecond)
 			st.mu.RLock()
 			on := st.OLEDOn
 			always := st.ClockAlwaysOn
