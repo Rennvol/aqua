@@ -293,6 +293,7 @@ func serialPushRelay(id string, on bool) bool {
 		// 2.5s terlalu mepet setelah reset: bootloader ~2s + splash 1.8s
 		// telan push pertama (log 15:46:08 & 16:05:30 selalu miss pertama).
 		timeout := time.After(4000 * time.Millisecond)
+	wait:
 		for {
 			select {
 			case a := <-serialAckCh:
@@ -314,7 +315,7 @@ func serialPushRelay(id string, on bool) bool {
 				if attempt == 0 {
 					log.Printf("serial: relay %s -> %d miss 1x, coba lagi", id, v)
 					time.Sleep(300 * time.Millisecond)
-					break // keluar wait-loop, lanjut attempt 2
+					break wait // keluar wait-loop, lanjut attempt 2
 				}
 				log.Printf("serial: relay %s -> %d TAK ADA ACK (relay diam!)", id, v)
 				if atomic.AddInt32(&serialFailStreak, 1) >= 2 {
