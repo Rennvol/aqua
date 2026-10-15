@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -23,11 +24,16 @@ var (
 	serialFile *os.File
 	// serialFailStreak hitung gagal beruntun (tulis gagal / tanpa ack);
 	// watchdog power-cycle UNO saat >= 2.
-	serialFailStreak int
+	// int32 + atomic: dibaca/ditulis dari readLoop, pushRelay, watchdog
+	// yang jalan di goroutine beda. int biasa + mutex parsial = race.
+	serialFailStreak int32
 	// serialAckCh terima ack UNO {"ack":"lamp","on":1}; push relay tunggu ini.
 	serialAckCh = make(chan serialAck, 8)
 	// serialAckMu gilirkan tulis+tunggu-ack biar ack tak tertukar antar relay.
 	serialAckMu sync.Mutex
+	// serialWatchdogAt cooldown: jangan hard reset tiap push gagal.
+	// Tanpa ini 10 jadwal gagal = 10 reset beruntun, USB naik-turun terus.
+	serialWatchdogAt int64
 )
 
 // serialAck pengakuan UNO bahwa relay fisik sudah digerakkan.
@@ -115,7 +121,7 @@ func serialWriteLine(s string) bool {
 		serialFile = nil
 		serialFile = serialOpen()
 		if serialFile == nil {
-			serialFailStreak++
+			atomic.AddInt32(&serialFailStreak, 1)
 			go serialWatchdog()
 			return false
 		}
@@ -124,29 +130,38 @@ func serialWriteLine(s string) bool {
 			log.Printf("serial: retry gagal: %v", err2)
 			serialFile.Close()
 			serialFile = nil
-			serialFailStreak++
+			atomic.AddInt32(&serialFailStreak, 1)
 			go serialWatchdog()
 			return false
 		}
 	}
-	serialFailStreak = 0
+	// tulis OK != UNO hidup: kernel buffer CDC-ACM selalu terima walau
+	// firmware hang. Jangan reset streak di sini — hanya ACK valid yang
+	// boleh nol-kan (lihat serialPushRelay). Kalau tidak, streak tak pernah
+	// capai 2 dan watchdog tak pernah jalan: inilah kenapa UNO bengong
+	// selamanya sampai tombol fisik ditekan.
 	return true
 }
 
 // serialWatchdog: 2x gagal beruntun = UNO hang → hard reset sekali
 // (DTR, gagal lanjut power-cycle USB), lalu restore relay. Async.
 func serialWatchdog() {
-	serialMu.Lock()
-	n := serialFailStreak
-	serialMu.Unlock()
+	n := atomic.LoadInt32(&serialFailStreak)
 	if n < 2 {
 		return
 	}
+	// cooldown 60s: reset terakhir < 1 menit lalu = skip. Hard reset butuh
+	// ~15s (DTR 4s / power-cycle 9s); tanpa jeda, push jadwal berikutnya
+	// picu reset lagi sebelum UNO selesai boot → reset bertumpuk, USB
+	// pindah ACM0→ACM1→ACM2 terus.
+	now := time.Now().Unix()
+	if last := atomic.LoadInt64(&serialWatchdogAt); now-last < 60 {
+		return
+	}
+	atomic.StoreInt64(&serialWatchdogAt, now)
 	log.Printf("serial: watchdog %d gagal beruntun → hard reset UNO", n)
 	if _, ok := serialResetUNOHard(); ok {
-		serialMu.Lock()
-		serialFailStreak = 0
-		serialMu.Unlock()
+		atomic.StoreInt32(&serialFailStreak, 0)
 	}
 }
 
@@ -266,7 +281,7 @@ drain:
 		case a := <-serialAckCh:
 			if a.id == id {
 				if a.on == on {
-					serialFailStreak = 0
+					atomic.StoreInt32(&serialFailStreak, 0)
 					log.Printf("serial: relay %s -> %d ACK ✓", id, v)
 					return true
 				}
@@ -280,11 +295,7 @@ drain:
 			}
 		case <-timeout:
 			log.Printf("serial: relay %s -> %d TAK ADA ACK (relay diam!)", id, v)
-			serialMu.Lock()
-			serialFailStreak++
-			n := serialFailStreak
-			serialMu.Unlock()
-			if n >= 2 {
+			if atomic.AddInt32(&serialFailStreak, 1) >= 2 {
 				go serialWatchdog()
 			}
 			return false
