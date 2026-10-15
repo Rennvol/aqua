@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"golang.org/x/sys/unix"
 )
 
 // Serial link STB <-> UNO, 9600 baud, 1 baris JSON + \n.
@@ -87,8 +88,10 @@ func serialOpen() *os.File {
 		if _, err := os.Stat(dev); err != nil {
 			continue
 		}
-		// set baud 9600 raw via stty (stdlib tak bisa set baud sendiri)
-		_ = exec.Command("stty", "-F", dev, "9600", "raw", "-echo", "-hupcl").Run()
+		// set baud 9600 raw via stty (stdlib tak bisa set baud sendiri).
+		// Tanpa -hupcl: DTR ikut turun saat port ditutup = auto-reset hardware
+		// jalan tiap close/open.
+		_ = exec.Command("stty", "-F", dev, "9600", "raw", "-echo").Run()
 		// O_NOCTTY: UNO jangan jadi controlling terminal. Tanpa ini, proses
 		// session-leader mengakuisisi ttyACM0 sebagai ctty; tiap power-cycle/
 		// cabut → kernel kirim SIGHUP → proses mati di tengah jalan (sebelum
@@ -376,13 +379,42 @@ func serialPowerCycleUNO() bool {
 	return true
 }
 
-// serialResetUNO reset UNO tanpa cabut kabel: tutup port + buka lagi.
-// Buka port toggle DTR → UNO auto-reset via bootloader; tunggu
-// bootloader+splash (~4s) lalu dorong ulang semua relay dari state (persist kv).
+// serialPulseDTR kirim pulse DTR 250ms ke UNO via ioctl TIOCM — ini yang
+// picu auto-reset hardware via kapasitor DTR→RESET. Tutup+buka port saja
+// TIDAK cukup saat stty -hupcl (DTR bertahan, UNO tak reboot — log
+// "DTR reset tapi UNO bisu" kemarin). Return false = fd mati, lanjut
+// power-cycle.
+func serialPulseDTR() bool {
+	serialMu.Lock()
+	f := serialFile
+	serialMu.Unlock()
+	if f == nil {
+		return false
+	}
+	fd := int(f.Fd())
+	m, err := unix.IoctlGetInt(fd, unix.TIOCMGET)
+	if err != nil {
+		return false
+	}
+	// DTR turun 250ms lalu naik = falling edge reset
+	if err := unix.IoctlSetInt(fd, unix.TIOCMSET, m&^unix.TIOCM_DTR); err != nil {
+		return false
+	}
+	time.Sleep(250 * time.Millisecond)
+	if err := unix.IoctlSetInt(fd, unix.TIOCMSET, m|unix.TIOCM_DTR); err != nil {
+		return false
+	}
+	return true
+}
+
+// serialResetUNO reset UNO tanpa cabut kabel: pulse DTR eksplisit (auto-reset
+// hardware), tunggu bootloader+splash (~4s), lalu dorong ulang semua relay
+// dari state (persist kv).
 // ponytail: sleep blocking 5s di handler HTTP, pindah async jika WriteTimeout diketatkan.
 func serialResetUNO() bool {
 	b, _ := json.Marshal(map[string]string{"cmd": "reset"})
 	serialWriteLine(string(b)) // coba soft reset dulu (butuh sketch baru); gagal pun lanjut DTR reset
+	serialPulseDTR()           // gagal pun lanjut: tutup+buka di bawah tetap coba
 	serialMu.Lock()
 	if serialFile != nil {
 		serialFile.Close()
