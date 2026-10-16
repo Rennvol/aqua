@@ -13,6 +13,7 @@
 #include <U8g2lib.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
+#include <avr/wdt.h>
 
 U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -137,19 +138,32 @@ void showClockFromEpoch(uint32_t epochUTC){
 }
 
 void setup() {
+  // WDT dulu dimatikan sebelum apa pun: kalau MCU baru direset WDT, flag MCUSR
+  // masih set dan watchdog masih hidup → boot berikutnya reset lagi (loop).
+  MCUSR = 0;
+  wdt_disable();
   Serial.begin(9600);
   pinMode(7, OUTPUT); digitalWrite(7, HIGH); // relay CH1 active LOW OFF
   pinMode(8, OUTPUT); digitalWrite(8, HIGH); // relay CH2 active LOW OFF
   pinMode(13, OUTPUT);
   Wire.begin();
+  // Batas waktu I2C: bus nyangkut / OLED lepas bikin endTransmission & u8g2
+  // nunggu selamanya = bengong total (raw sunyi, DTR & power-cycle tak mempan).
+  // 3s + reset TWI biar Wire pulih sendiri, bukan mati di sana.
+  Wire.setWireTimeout(3000, true);
   hasRTC = rtcProbe();
   u8g2.begin();
   showSplash();
   delay(1800);
   showLines();
+  // Lapis terakhir: hang apa pun >2s (I2C/OLED/parse) = MCU reset sendiri,
+  // UNO balik ke splash lalu terima push relay lagi. Tanpa ini bengong abadi
+  // sampai tombol fisik dicabut.
+  wdt_enable(WDTO_2S);
 }
 
 void loop() {
+  wdt_reset(); // makan watchdog tiap iterasi; hang di bawah = reset 2s
   if (clockRestoreAt && (long)(millis() - clockRestoreAt) >= 0) { clockRestoreAt = 0; if(!clockAlwaysMode) showLines(); }
   if(clockAlwaysMode){
     uint32_t ep = nowEpoch();
