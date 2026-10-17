@@ -149,8 +149,11 @@ void setup() {
   Wire.begin();
   // Batas waktu I2C: bus nyangkut / OLED lepas bikin endTransmission & u8g2
   // nunggu selamanya = bengong total (raw sunyi, DTR & power-cycle tak mempan).
-  // 3s + reset TWI biar Wire pulih sendiri, bukan mati di sana.
-  Wire.setWireTimeout(3000, true);
+  // 1200ms WAJIB < WDTO_2S: kalau timeout lebih panjang dari watchdog,
+  // WDT reset MCU di tengah transfer I2C → slave (OLED/RTC) tetap menahan
+  // SDA LOW → boot berikutnya nyangkut lagi = loop reset. Wire harus pulih
+  // dan melepas bus DULU, baru WDT jadi lapis terakhir.
+  Wire.setWireTimeout(1200, true);
   hasRTC = rtcProbe();
   u8g2.begin();
   showSplash();
