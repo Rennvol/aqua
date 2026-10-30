@@ -45,10 +45,13 @@ var (
 	serialPowerCycleAt int64
 )
 
-// serialAck pengakuan UNO bahwa relay fisik sudah digerakkan.
+// serialAck pengakuan UNO bahwa relay fisik sudah digerakkan. Untuk pong
+// (heartbeat) lamp/fan membawa state relay yang dipegang UNO.
 type serialAck struct {
-	id string
-	on bool
+	id   string
+	on   bool
+	lamp bool
+	fan  bool
 }
 
 var serialCandidates = []string{"/dev/ttyACM0", "/dev/ttyACM1", "/dev/ttyUSB0"}
@@ -526,8 +529,16 @@ func serialReadLoop() {
 				if rawOn, ok2 := m["on"]; ok2 {
 					_ = json.Unmarshal(rawOn, &onInt)
 				}
+				// pong membawa state relay UNO (heartbeat)
+				var lampInt, fanInt int
+				if rawLamp, ok3 := m["lamp"]; ok3 {
+					_ = json.Unmarshal(rawLamp, &lampInt)
+				}
+				if rawFan, ok4 := m["fan"]; ok4 {
+					_ = json.Unmarshal(rawFan, &fanInt)
+				}
 				select {
-				case serialAckCh <- serialAck{id: id, on: onInt == 1}:
+				case serialAckCh <- serialAck{id: id, on: onInt == 1, lamp: lampInt == 1, fan: fanInt == 1}:
 				default:
 				}
 				continue
@@ -575,12 +586,13 @@ func serialOLEDLoop() {
 
 // RunMock simulates sensor data when no UNO is connected.
 // Temperatures drifts around 28°C, voltage ~12V, current varies.
+//
+// PENTING: fungsi ini tidak boleh menulis Mode/Connected. Dulu ia menyetel
+// Mode="mock" + Connected=false di awal, padahal RunSerial memanggilnya tanpa
+// syarat di akhir — jadi setiap boot state berakhir "mock" walau UNO benar-benar
+// tersambung, dan /api/state berbohong (connected:false) sementara relay dapat
+// ACK. Kepemilikan Mode/Connected ada di RunSerial/watchSerialPresence.
 func RunMock() {
-	st.mu.Lock()
-	st.Mode = "mock"
-	st.Connected = false
-	st.mu.Unlock()
-
 	t := 28.0
 	v := 12.0
 	i := 0.0
@@ -659,13 +671,92 @@ func RunSerial() {
 			serialPushAllRelays() // retry 3 — pastikan sampai
 		}()
 	} else {
+		st.mu.Lock()
+		st.Mode = "mock"
+		st.Connected = false
+		st.mu.Unlock()
 		log.Println("serial: /dev/ttyACM0 tak ada, mode mock")
 	}
 	go serialReadLoop()
 	go serialOLEDLoop()
 	go serialClockAlwaysLoop()
 	go watchSerialPresence()
+	go serialHeartbeatLoop()
 	RunMock() // tetap jalan sebagai fallback sensor; diam saat serial aktif
+}
+
+// serialHeartbeatLoop kirim ping tiap 5 detik dan, saat UNO menjawab pong dengan
+// state relay yang berbeda dari yang dipegang STB, push ulang relay yang
+// menyimpang. Ini menutup celah yang tidak tertangkap watchSerialPresence: UNO
+// reset sendiri (watchdog/DTR/brownout saat mati lampu) sementara fd serial di
+// STB masih valid — dulu relay tinggal OFF sampai jadwal berikutnya.
+//
+// ponytail: ping 5 dtk, butuh 2 pong berturut-turut yang menyimpang sebelum
+// menindak, supaya satu balasan basi tidak memicu push sia-sia. Naikkan
+// interval kalau lalu lintas serial jadi masalah.
+func serialHeartbeatLoop() {
+	time.Sleep(6 * time.Second) // beri waktu push awal selesai
+	divergent := 0
+	for {
+		time.Sleep(5 * time.Second)
+		serialMu.Lock()
+		has := serialFile != nil
+		serialMu.Unlock()
+		if !has {
+			divergent = 0
+			continue
+		}
+		_, lamp, fan, ok := serialPing()
+		if !ok {
+			divergent = 0
+			continue
+		}
+		// UNO baru saja reset: state-nya belum tentu sama dengan STB.
+		st.mu.RLock()
+		wantLamp, wantFan := st.RelayLamp, st.RelayFan
+		st.mu.RUnlock()
+		if lamp == wantLamp && fan == wantFan {
+			divergent = 0
+			continue
+		}
+		divergent++
+		if divergent < 2 {
+			continue
+		}
+		log.Printf("serial: UNO state menyimpang (lamp %v→%v, fan %v→%v), push ulang",
+			lamp, wantLamp, fan, wantFan)
+		divergent = 0
+		serialPushAllRelays()
+	}
+}
+
+// serialPing kirim {"cmd":"ping"} dan tunggu pong berisi state relay UNO.
+func serialPing() (got bool, lamp, fan bool, ok bool) {
+	serialAckMu.Lock()
+	defer serialAckMu.Unlock()
+	// buang ack basi supaya pong lama tidak dibaca sebagai jawaban sekarang
+drainPing:
+	for {
+		select {
+		case <-serialAckCh:
+		default:
+			break drainPing
+		}
+	}
+	if !serialWriteLine(`{"cmd":"ping"}`) {
+		return false, false, false, false
+	}
+	deadline := time.After(2500 * time.Millisecond)
+	for {
+		select {
+		case a := <-serialAckCh:
+			if a.id == "pong" {
+				return true, a.lamp, a.fan, true
+			}
+		case <-deadline:
+			return false, false, false, false
+		}
+	}
 }
 
 // watchSerialPresence pantau colok/cabut UNO tanpa restart.
