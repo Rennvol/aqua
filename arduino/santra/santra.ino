@@ -14,16 +14,6 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <avr/wdt.h>
-#include <EEPROM.h>
-
-// EEPROM: relay state harus selamat dari reset. Tanpa ini setup() memaksa kedua
-// relay OFF tiap UNO restart (mati lampu -> USB drop -> UNO reset -> relay mati
-// sampai jadwal berikutnya). Tiga byte saja; EEPROM.update() hanya menulis saat
-// nilai berubah, jadi siklus tulis ~100k tidak terpakai percuma.
-#define EE_MAGIC 0xA5
-#define EE_ADDR_MAGIC 0
-#define EE_ADDR_LAMP  1
-#define EE_ADDR_FAN   2
 
 U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
@@ -156,19 +146,6 @@ void setup() {
   pinMode(7, OUTPUT); digitalWrite(7, HIGH); // relay CH1 active LOW OFF
   pinMode(8, OUTPUT); digitalWrite(8, HIGH); // relay CH2 active LOW OFF
   pinMode(13, OUTPUT);
-  // Pulihkan relay SEBELUM apa pun yang bisa hang: kalau WDT/DTR reset terjadi
-  // saat lampu menyala, pengguna tidak boleh ditinggal dalam gelap sampai jadwal
-  // berikutnya. Magic byte menjaga boot pertama (EEPROM acak) tetap OFF.
-  if (EEPROM.read(EE_ADDR_MAGIC) == EE_MAGIC) {
-    lampOn = EEPROM.read(EE_ADDR_LAMP) ? true : false;
-    fanOn  = EEPROM.read(EE_ADDR_FAN)  ? true : false;
-    digitalWrite(7, lampOn ? LOW : HIGH);
-    digitalWrite(8, fanOn ? LOW : HIGH);
-    digitalWrite(13, lampOn ? HIGH : LOW);
-  } else {
-    lampOn = false;
-    fanOn = false;
-  }
   Wire.begin();
   // Batas waktu I2C: bus nyangkut / OLED lepas bikin endTransmission & u8g2
   // nunggu selamanya = bengong total (raw sunyi, DTR & power-cycle tak mempan).
@@ -235,11 +212,6 @@ void loop() {
       if (id){
         if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(7, on ? LOW : HIGH); digitalWrite(13, on ? HIGH : LOW); }
         if (strcmp(id, "fan") == 0){ fanOn = on; digitalWrite(8, on ? LOW : HIGH); }
-        // Simpan ke EEPROM supaya reset UNO tidak mematikan relay. update()
-        // hanya menulis saat byte berubah.
-        EEPROM.update(EE_ADDR_MAGIC, EE_MAGIC);
-        EEPROM.update(EE_ADDR_LAMP, lampOn ? 1 : 0);
-        EEPROM.update(EE_ADDR_FAN,  fanOn  ? 1 : 0);
         // ack: bukti relay fisik sudah digerakkan (STB tunggu ini, tanpa ack = gagal)
         Serial.print(F("{\"ack\":\"")); Serial.print(id); Serial.print(F("\",\"on\":")); Serial.print(on); Serial.println(F("}"));
       }
@@ -247,6 +219,17 @@ void loop() {
       // Heartbeat: STB kirim tiap 5 dtk. Balasan pong membuktikan loop UNO masih
       // hidup — STB memakainya untuk mendeteksi UNO yang reset diam-diam (fd
       // serial masih valid, jadi tanpa ping relay tak pernah di-push ulang).
+      Serial.print(F("{\"ack\":\"pong\",\"on\":1,\"lamp\":"));
+      Serial.print(lampOn ? 1 : 0);
+      Serial.print(F(",\"fan\":"));
+      Serial.print(fanOn ? 1 : 0);
+      Serial.println(F("}"));
+    } else if (strcmp(cmd, "ping") == 0) {
+      // Heartbeat: STB kirim tiap 5 dtk. Pong membuktikan loop UNO masih hidup
+      // DAN membawa state relay yang dipegang UNO — STB membandingkannya dengan
+      // state sendiri, jadi UNO yang reset diam-diam (fd serial masih valid)
+      // ketahuan dan relay di-push ulang. Ini yang dulu tidak ada: relay tinggal
+      // OFF sampai jadwal berikutnya.
       Serial.print(F("{\"ack\":\"pong\",\"on\":1,\"lamp\":"));
       Serial.print(lampOn ? 1 : 0);
       Serial.print(F(",\"fan\":"));
