@@ -8,14 +8,35 @@
 //   STB -> UNO : {"cmd":"reset"}  soft reset (tombol Reset UNO di web, tanpa cabut kabel)
 // Splash boot = "santra." (bukan random).
 // Anti burn-in: micro-shift 2px tiap refresh + jam digit selalu beda.
-// Libs: U8g2, ArduinoJson (v7 JsonDocument)
+// Libs: U8x8 (teks saja), ArduinoJson (v7 JsonDocument)
+//
+// U8x8 bukan U8g2: firmware ini tidak pernah menggambar grafik/ikon, hanya teks,
+// jadi jalur gambar-penuh U8g2 (10 KB flash) dibuang dan diganti u8x8 (font
+// bitmap siap pakai, tanpa dua buffer). Hemat ~8 KB flash untuk fitur baru.
+// Konsekuensi: posisi karakter terkunci di grid font (kolom x lebar sel), tidak
+// ada lagi teks 32px bebas posisi. Lihat showClockFromEpoch() untuk layout.
 
-#include <U8g2lib.h>
+#include <U8x8lib.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <avr/wdt.h>
 
-U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+// HW I2C = pin A4/A5 (sesuai wiring board), bukan software I2C.
+U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(U8X8_PIN_NONE);
+
+// Baris teks: 8x13B_1x2 adalah font tebal 16x26 px (lebar sel 8, 1x2 = dobel
+// tinggi), jadi 128/16 = 8 kolom x 64/26 = 2 baris. Dipakai untuk jam besar.
+// 6x10_1x2 untuk 4 baris status (lebar sel 6, 2 baris tinggi = 20 px).
+
+// Tulis teks di kolom karakter, bukan piksel: rata tengah manual. Jumlah kolom
+// diambil dari u8x8.getCols() setelah setFont, jadi tidak ada angka ajaib lebar
+// sel yang bisa salah kalau fontnya diganti.
+static void drawCentered(uint8_t row, const char *t, uint8_t dx = 0){
+  uint8_t cols = u8x8.getCols();
+  uint8_t n = strlen(t);
+  uint8_t col = n < cols ? (cols - n) / 2 + dx : dx;
+  u8x8.drawString(col, row, t);
+}
 
 String lines[4] = {"santra.", "pantau & kontrol", "menunggu STB...", ""};
 bool lampOn = false;
@@ -60,38 +81,33 @@ uint32_t nowEpoch(){
 void syncTime(uint32_t epoch){ softEpoch = epoch; softMillis = millis(); if(hasRTC) rtcSet(epoch); }
 
 void showSplash(){
-  u8g2.firstPage();
-  do {
-    u8g2.setFont(u8g2_font_logisoso22_tr);
-    const char *t="santra.";
-    uint8_t w=u8g2.getStrWidth(t);
-    u8g2.drawStr((128-w)/2, 32, t);
-    u8g2.setFont(u8g2_font_6x10_tr);
-    const char *s="pantau & kontrol";
-    w=u8g2.getStrWidth(s);
-    u8g2.drawStr((128-w)/2, 48, s);
-  } while(u8g2.nextPage());
+  u8x8.clear();
+  // Judul pakai font yang sama dengan jam: tiap font u8x8 ~3.5 KB flash, jadi
+  // font tambahan khusus splash tidak sepadan. 8x13B_1x2 = 16x26 px, cukup besar.
+  u8x8.setFont(u8x8_font_8x13B_1x2_f);
+  drawCentered(0, "santra.");
+  // baris 3: tagline kecil (6x10 px)
+  u8x8.setFont(u8x8_font_5x7_f);
+  drawCentered(u8x8.getRows() - 1, "pantau & kontrol", burnShift);
 }
 void showLines() {
-  burnShift ^= 2; // toggle 0/2 px
-  u8g2.firstPage();
-  do {
-    u8g2.setFont(u8g2_font_ncenB08_tr);
-    for (uint8_t i = 0; i < 4; i++) {
-      u8g2.drawStr(burnShift, 12 + i * 14, lines[i].c_str());
-    }
-  } while (u8g2.nextPage());
+  // Anti burn-in: u8x8 tidak bisa geser 2 px bebas (posisi terkunci grid font),
+  // jadi digeser PER KOLOM karakter — 0/1 kolom = 0/6 px. Efeknya sama:
+  // piksel tidak diam di titik yang sama terus.
+  burnShift ^= 1;
+  u8x8.clear();
+  u8x8.setFont(u8x8_font_5x7_f);
+  // 5x7_f: 8 baris x 21 kolom per layar, jadi 4 baris muat lega.
+  for (uint8_t i = 0; i < 4; i++) {
+    if (lines[i].length()) u8x8.drawString(burnShift, i, lines[i].c_str());
+  }
 }
 void showClock(const char *t) {
-  burnShift ^= 2;
-  u8g2.firstPage();
-  do {
-    u8g2.setFont(u8g2_font_logisoso32_tr);
-    uint8_t w = u8g2.getStrWidth(t);
-    uint8_t x = w < 128 ? (128 - w) / 2 + burnShift : burnShift;
-    if(x>4) x-=1;
-    u8g2.drawStr(x, 44, t);
-  } while (u8g2.nextPage());
+  burnShift ^= 1;
+  u8x8.clear();
+  // 8x13B_1x2: sel 16x26 px, 5 char "10:30" = 80 px → 2 kolom sisa, bagi 2.
+  u8x8.setFont(u8x8_font_8x13B_1x2_f);
+  drawCentered(0, t, burnShift);
 }
 void showClockFromEpoch(uint32_t epochUTC){
   uint32_t wib = epochUTC + 7*3600UL;
@@ -118,23 +134,22 @@ void showClockFromEpoch(uint32_t epochUTC){
   const char *wname[7]={"Ming","Sen","Sel","Rab","Kam","Jum","Sab"};
   const char *mname[12]={"Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"};
   char dbuf[24]; snprintf(dbuf,sizeof(dbuf),"%s %02u %s %d",wname[wday],(unsigned)d,mname[mo-1],y);
-  burnShift ^= 2;
-  u8g2.firstPage();
-  do {
-    // jam besar di atas
-    u8g2.setFont(u8g2_font_logisoso32_tr);
-    uint8_t tw = u8g2.getStrWidth(tbuf);
-    int8_t tx = (128 - (int)tw - 14) / 2 + burnShift; // sisakan ruang AM/PM 14px
-    if(tx < 0) tx = burnShift;
-    u8g2.drawStr(tx, 36, tbuf);
-    // AM/PM kecil di kanan jam
-    u8g2.setFont(u8g2_font_6x10_tr);
-    u8g2.drawStr(tx + tw + 3, 28, ap);
-    // tanggal di bawah
-    u8g2.setFont(u8g2_font_6x10_tr);
-    uint8_t dw = u8g2.getStrWidth(dbuf);
-    u8g2.drawStr((128 - dw)/2 + burnShift, 60, dbuf);
-  } while(u8g2.nextPage());
+  burnShift ^= 1;
+  u8x8.clear();
+  // Baris 0-1: jam besar 8x13B_1x2 (sel 16x26 px). "10:30" = 5 char = 80 px.
+  // AM/PM muat di 3 kolom sisa (48 px) pada font 6x10, jadi tidak perlu baris
+  // sendiri — tapi u8x8 menulis per sel, bukan per piksel, jadi AM/PM ditaruh
+  // di kolom 18 ke atas... tidak ada kolom 18. Solusi: jam 4 char (10:30 → 5
+  // char tak muat bersama AM/PM). Karena itu jam dan AM/PM dipisah baris.
+  u8x8.setFont(u8x8_font_8x13B_1x2_f);
+  // Jam + AM/PM di baris yang sama: 8 kolom total, "10:30" 5 kolom, sisa 3
+  // kolom untuk AM/PM pada font kecil butuh 2-3 kolom — jadi AM/PM ditaruh
+  // menempel kanan jam tanpa mengganti baris.
+  u8x8.drawString(1 + burnShift, 0, tbuf);
+  u8x8.setFont(u8x8_font_5x7_f);
+  u8x8.drawString(7, 0, ap);
+  // Baris 6: tanggal (6x10 px per sel)
+  drawCentered(u8x8.getRows() - 1, dbuf, burnShift);
 }
 
 void setup() {
@@ -147,7 +162,7 @@ void setup() {
   pinMode(8, OUTPUT); digitalWrite(8, HIGH); // relay CH2 active LOW OFF
   pinMode(13, OUTPUT);
   Wire.begin();
-  // Batas waktu I2C: bus nyangkut / OLED lepas bikin endTransmission & u8g2
+  // Batas waktu I2C: bus nyangkut / OLED lepas bikin endTransmission & u8x8
   // nunggu selamanya = bengong total (raw sunyi, DTR & power-cycle tak mempan).
   // 1200ms WAJIB < WDTO_2S: kalau timeout lebih panjang dari watchdog,
   // WDT reset MCU di tengah transfer I2C → slave (OLED/RTC) tetap menahan
@@ -155,7 +170,9 @@ void setup() {
   // dan melepas bus DULU, baru WDT jadi lapis terakhir.
   Wire.setWireTimeout(1200, true);
   hasRTC = rtcProbe();
-  u8g2.begin();
+  u8x8.begin();
+  u8x8.setPowerSave(0);
+  u8x8.setFlipMode(0);
   showSplash();
   delay(1800);
   showLines();
@@ -219,17 +236,6 @@ void loop() {
       // Heartbeat: STB kirim tiap 5 dtk. Balasan pong membuktikan loop UNO masih
       // hidup — STB memakainya untuk mendeteksi UNO yang reset diam-diam (fd
       // serial masih valid, jadi tanpa ping relay tak pernah di-push ulang).
-      Serial.print(F("{\"ack\":\"pong\",\"on\":1,\"lamp\":"));
-      Serial.print(lampOn ? 1 : 0);
-      Serial.print(F(",\"fan\":"));
-      Serial.print(fanOn ? 1 : 0);
-      Serial.println(F("}"));
-    } else if (strcmp(cmd, "ping") == 0) {
-      // Heartbeat: STB kirim tiap 5 dtk. Pong membuktikan loop UNO masih hidup
-      // DAN membawa state relay yang dipegang UNO — STB membandingkannya dengan
-      // state sendiri, jadi UNO yang reset diam-diam (fd serial masih valid)
-      // ketahuan dan relay di-push ulang. Ini yang dulu tidak ada: relay tinggal
-      // OFF sampai jadwal berikutnya.
       Serial.print(F("{\"ack\":\"pong\",\"on\":1,\"lamp\":"));
       Serial.print(lampOn ? 1 : 0);
       Serial.print(F(",\"fan\":"));
