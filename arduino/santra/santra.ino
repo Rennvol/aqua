@@ -8,10 +8,11 @@
 //   STB -> UNO : {"cmd":"reset"}  soft reset (tombol Reset UNO di web, tanpa cabut kabel)
 // Splash boot = "santra." (bukan random).
 // Anti burn-in: micro-shift 2px tiap refresh + jam digit selalu beda.
-// Libs: U8g2, ArduinoJson (v7 JsonDocument)
+// Libs: U8g2 saja. JSON diparse jsonmini.h (parser datar sendiri) — hemat
+// ~5,9 KB flash dari 32 KB. Uji parser: gcc -o /tmp/pt parser_test.c && /tmp/pt
 
 #include <U8g2lib.h>
-#include <ArduinoJson.h>
+#include "jsonmini.h"
 #include <Wire.h>
 #include <avr/wdt.h>
 
@@ -179,42 +180,48 @@ void loop() {
     String s = Serial.readStringUntil('\n');
     s.trim();
     if (s.length() == 0) return;
-    JsonDocument doc;
-    if (deserializeJson(doc, s)) return;
-    const char *cmd = doc["cmd"];
-    if (!cmd) return;
+    // Parser ganti ArduinoJson (lihat jsonmini.h). Buffer char, bukan String:
+    // tiap String menambah heap, dan RAM UNO cuma 2 KB.
+    const char *js = s.c_str();
+    char cmd[14];
+    if (!jmStr(js, "\"cmd\"", cmd, sizeof(cmd))) return;
     if (strcmp(cmd, "oled") == 0) {
       if(clockAlwaysMode) return;
-      JsonArray arr = doc["lines"];
-      if (!arr.isNull()) {
-        uint8_t i = 0;
-        for (JsonVariant v : arr) { if (i >= 4) break; lines[i++] = String((const char *)v.as<const char *>()); }
-        showLines();
-      }
+      char got[4][JM_STRMAX];
+      uint8_t n = jmStrArray(js, "\"lines\"", got, 4);
+      if (n) { for (uint8_t i = 0; i < n; i++) lines[i] = got[i]; showLines(); }
     } else if (strcmp(cmd, "clock") == 0) {
-      const char *t = doc["text"] | "88:88";
-      int dur = doc["dur"] | 10; if (dur <= 0) dur = 10; if (dur > 90) dur = 90;
-      if(!doc["epoch"].isNull()){ uint32_t e = doc["epoch"].as<uint32_t>(); if(e>1700000000UL) syncTime(e); }
+      char t[8];
+      if (!jmStr(js, "\"text\"", t, sizeof(t))) strcpy(t, "88:88");
+      int dur = (int)jmInt(js, "\"dur\"", 10); if (dur <= 0) dur = 10; if (dur > 90) dur = 90;
+      uint32_t e = (uint32_t)jmInt(js, "\"epoch\"", 0); if (e > 1700000000UL) syncTime(e);
       showClock(t);
       clockRestoreAt = millis() + (unsigned long)dur * 1000UL;
     } else if (strcmp(cmd, "clockAlways") == 0) {
-      int on = doc["on"] | 0;
-      uint32_t e = 0; if(!doc["epoch"].isNull()) e = doc["epoch"].as<uint32_t>();
-      if(e>1700000000UL) syncTime(e);
+      int on = (int)jmInt(js, "\"on\"", 0);
+      uint32_t e = (uint32_t)jmInt(js, "\"epoch\"", 0);
+      if (e > 1700000000UL) syncTime(e);
       clockAlwaysMode = on;
-      if(on){ lastMinute = 0xFFFFFFFF; uint32_t ep = nowEpoch(); if(ep) showClockFromEpoch(ep); else { const char *t = doc["text"] | "00:00"; showClock(t);} clockRestoreAt = 0; }
-      else showLines();
+      if (on) {
+        lastMinute = 0xFFFFFFFF;
+        uint32_t ep = nowEpoch();
+        if (ep) showClockFromEpoch(ep);
+        else { char t[8]; if (!jmStr(js, "\"text\"", t, sizeof(t))) strcpy(t, "00:00"); showClock(t); }
+        clockRestoreAt = 0;
+      } else showLines();
     } else if (strcmp(cmd, "sync") == 0) {
-      uint32_t e = doc["epoch"] | 0; if(e>1700000000UL) syncTime(e);
-      if(clockAlwaysMode){ uint32_t ep = nowEpoch(); if(ep){ lastMinute = ep/60UL; showClockFromEpoch(ep);} }
+      uint32_t e = (uint32_t)jmInt(js, "\"epoch\"", 0);
+      if (e > 1700000000UL) syncTime(e);
+      if (clockAlwaysMode) { uint32_t ep = nowEpoch(); if (ep) { lastMinute = ep/60UL; showClockFromEpoch(ep); } }
     } else if (strcmp(cmd, "relay") == 0) {
-      const char *id = doc["id"]; int on = doc["on"];
-      if (id){
-        if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(7, on ? LOW : HIGH); digitalWrite(13, on ? HIGH : LOW); }
-        if (strcmp(id, "fan") == 0){ fanOn = on; digitalWrite(8, on ? LOW : HIGH); }
-        // ack: bukti relay fisik sudah digerakkan (STB tunggu ini, tanpa ack = gagal)
-        Serial.print(F("{\"ack\":\"")); Serial.print(id); Serial.print(F("\",\"on\":")); Serial.print(on); Serial.println(F("}"));
-      }
+      char id[8];
+      // id wajib: tanpa id kita tidak tahu relay mana, jadi jangan ack.
+      if (!jmStr(js, "\"id\"", id, sizeof(id))) return;
+      int on = (int)jmInt(js, "\"on\"", 0);
+      if (strcmp(id, "lamp") == 0){ lampOn = on; digitalWrite(7, on ? LOW : HIGH); digitalWrite(13, on ? HIGH : LOW); }
+      if (strcmp(id, "fan") == 0){ fanOn = on; digitalWrite(8, on ? LOW : HIGH); }
+      // ack: bukti relay fisik sudah digerakkan (STB tunggu ini, tanpa ack = gagal)
+      Serial.print(F("{\"ack\":\"")); Serial.print(id); Serial.print(F("\",\"on\":")); Serial.print(on); Serial.println(F("}"));
     } else if (strcmp(cmd, "ping") == 0) {
       // Heartbeat: STB kirim tiap 5 dtk. Balasan pong membuktikan loop UNO masih
       // hidup — STB memakainya untuk mendeteksi UNO yang reset diam-diam (fd
