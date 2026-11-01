@@ -1,10 +1,16 @@
-// Uji parser tanpa UNO: gcc -o /tmp/pt parser_test.c && /tmp/pt
+// Uji parser tanpa UNO:
+//   cd arduino && gcc -Wall -Wextra -o /tmp/pt parser_test.c && /tmp/pt
+//
+// WAJIB tinggal di arduino/, BUKAN di arduino/santra/: arduino-cli ikut
+// mengompilasi setiap .c di folder sketch, dan main() di file ini menimpa
+// main() Arduino — firmware jadi 12432 B, font logisoso hilang, jam besar mati
+// tanpa error compile. Pernah terjadi; jangan diulang.
 // Payload di bawah adalah yang BENAR-BENAR dikirim serial.go (json.Marshal),
 // bukan karangan — termasuk kasus tepi: nilai kosong, escape, angka negatif,
 // kunci yang mirip (on vs epoch), dan perintah cacat.
 #include <stdio.h>
 #include <assert.h>
-#include "jsonmini.h"
+#include "santra/jsonmini.h"
 
 static void t_str_ok(void){
   char buf[16];
