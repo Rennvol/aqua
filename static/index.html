@@ -35,6 +35,7 @@
   --rule:oklch(30% 0.020 150);--rule-soft:oklch(24% 0.016 150);
   /* aksen fosfor */
   --accent:oklch(84% 0.190 152);--accent-ink:oklch(15% 0.020 152);--focus:oklch(86% 0.190 152);
+  --danger:oklch(70% 0.190 25);
   --good:oklch(82% 0.170 150);--bad:oklch(70% 0.190 25);
   --z-pick:20;--z-toast:30;--z-login:40;
 
@@ -58,6 +59,7 @@
   --ink:oklch(21% 0.018 150);--ink-2:oklch(38% 0.020 150);--muted:oklch(50% 0.020 150);
   --rule:oklch(84% 0.014 150);--rule-soft:oklch(90% 0.010 150);
   --accent:oklch(48% 0.150 152);--accent-ink:oklch(99% 0.005 150);--focus:oklch(46% 0.170 152);
+  --danger:oklch(52% 0.190 25);
   --good:oklch(48% 0.150 150);--bad:oklch(52% 0.190 25);
 }
 
@@ -252,6 +254,16 @@ header::-webkit-scrollbar{display:none}
 }
 .btn:hover{border-color:var(--accent);background:var(--paper-2)}
 .btn:active{transform:scale(0.98)}
+/* .danger: hapus relay/sensor. Sebelumnya dipaksa min-height:32px inline
+   sehingga satu-satunya tombol di halaman yang tidak memenuhi 44px. */
+.btn.danger{color:var(--danger);border-color:color-mix(in oklch,var(--danger) 42%,var(--rule))}
+.btn.danger:hover{background:color-mix(in oklch,var(--danger) 14%,var(--paper-3));border-color:var(--danger)}
+.row-actions{display:flex;gap:var(--space-2);justify-content:flex-end}
+/* tombol ikon: kotak 44px, bukan padding 4px yang bikin 29x44 */
+.btn.icon{min-width:var(--tap);padding:0;font-size:var(--text-sm);line-height:1}
+/* .sel dipakai sebagai tombol pemilih ikon: jangan width:70px kaku */
+button.sel{min-height:var(--tap);padding:0 var(--space-3);width:auto;font-family:var(--font-ui);font-size:var(--text-sm);background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:var(--radius-sm);cursor:pointer}
+button.sel:hover{border-color:var(--accent)}
 .btn.primary{
   background:var(--accent);border-color:var(--accent);
   color:var(--accent-ink);font-weight:700;
@@ -259,7 +271,7 @@ header::-webkit-scrollbar{display:none}
 .btn.primary:hover{filter:brightness(1.08)}
 
 /* ── input ────────────────────────────────────────────── */
-input[type=text],input[type=password],input[type=number],textarea,select{
+input[type=text],input[type=password],input[type=number],input[type=time],input[type=date],textarea,select{
   font-family:var(--font-ui);font-size:var(--text-sm);
   background:var(--paper);color:var(--ink);
   border:1px solid var(--rule);border-radius:var(--radius-sm);
@@ -275,6 +287,27 @@ input:focus,textarea:focus,select:focus{
 }
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}
 label{font-size:var(--text-xs);color:var(--muted);font-family:var(--font-ui);display:block;margin-bottom:5px}
+
+/* ── form & grid data: dipakai semua tab, bukan inline ──
+   Sebelumnya tiap tab menulis grid-template sendiri (1fr 1fr, 4x 1fr,
+   1fr 1fr auto auto). Di 390px kolom 'auto auto' memaksa melebar dan
+   tinggi kontrol jadi beda-beda. auto-fit menyelesaikan keduanya. */
+.field{display:flex;flex-direction:column;gap:var(--space-1);margin-bottom:0;
+  font-size:var(--text-xs);color:var(--muted);font-family:var(--font-ui)}
+.field.center{align-items:center}
+.field>*{margin-bottom:0}
+
+.form-grid{display:grid;gap:var(--space-2);
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.form-grid.wide{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+
+/* pasangan kunci-nilai: label kecil di atas, angka besar di bawah */
+.kv-grid{display:grid;gap:var(--space-3) var(--space-4);
+  grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  font-size:var(--text-sm)}
+.kv-grid dt{color:var(--muted);font-size:var(--text-2xs);margin-bottom:2px}
+.kv-grid dd,.kv-grid .v{font-weight:600;margin:0;word-break:break-word}
+.kv-grid .k{color:var(--muted);font-size:var(--text-2xs);margin-bottom:2px}
 
 /* ── tombol tema ──────────────────────────────────────── */
 .theme-btn{
@@ -349,7 +382,18 @@ label{font-size:var(--text-xs);color:var(--muted);font-family:var(--font-ui);dis
 .sched-table td{
   padding:var(--space-3) var(--space-2);
   border-bottom:1px solid var(--rule-soft);
+  /* teks (nama relay) pakai UI, ANGKA (jam, hit) tetap mono tabular.
+     Sebelumnya seluruh td mono -> nama relay "Kipas" tampil sebagai kode. */
+  font-family:var(--font-ui);
+}
+.sched-table td:nth-child(3),.sched-table td:nth-child(5){
   font-family:var(--font);font-variant-numeric:tabular-nums;
+}
+code{
+  font-family:var(--font);font-size:var(--text-xs);
+  background:var(--paper-3);border:1px solid var(--rule-soft);
+  border-radius:var(--radius-sm);padding:2px 6px;
+  word-break:break-all;
 }
 
 /* ── ikon picker ──────────────────────────────────────── */
@@ -508,30 +552,30 @@ footer{
       <h2 class="kicker">Kondisi STB</h2>
       <div class="lede">/proc + thermal_zone0. Di Oracle tampil — (STB = angka).</div>
       <div class="bench">
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Suhu</div><div id="hostTemp" style="font-weight:600;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">RAM</div><div id="hostRam" style="font-weight:600;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Load 1m</div><div id="hostLoad" style="font-weight:600;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Uptime</div><div id="hostUptime" style="font-weight:600;">—</div></div>
+        <div class="kv-grid">
+          <div><div class="k">Suhu</div><div id="hostTemp" style="font-weight:600;">—</div></div>
+          <div><div class="k">RAM</div><div id="hostRam" style="font-weight:600;">—</div></div>
+          <div><div class="k">Load 1m</div><div id="hostLoad" style="font-weight:600;">—</div></div>
+          <div><div class="k">Uptime</div><div id="hostUptime" style="font-weight:600;">—</div></div>
         </div>
       </div>
       <div class="bench" style="margin-top:8px">
         <div class="cap"><b>Jaringan & Storage</b> — IP lokal, Tailscale, disk · CPU · Net · Model</div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">IP Lokal</div><div id="hostIPLocal" style="font-weight:600;word-break:break-all;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Tailscale STB</div><div id="hostIPTail" style="font-weight:600;word-break:break-all;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Tailscale Oracle</div><div id="hostOracleTail" style="font-weight:600;word-break:break-all;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Disk</div><div id="hostDisk" style="font-weight:600;word-break:break-all;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">CPU</div><div id="hostCpu" style="font-weight:600;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Net</div><div id="hostNet" style="font-weight:600;word-break:break-all;">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Model</div><div id="hostModel" style="font-weight:600;word-break:break-all;">—</div></div>
+        <div class="kv-grid">
+          <div><div class="k">IP Lokal</div><div id="hostIPLocal" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div class="k">Tailscale STB</div><div id="hostIPTail" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div class="k">Tailscale Oracle</div><div id="hostOracleTail" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div class="k">Disk</div><div id="hostDisk" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div class="k">CPU</div><div id="hostCpu" style="font-weight:600;">—</div></div>
+          <div><div class="k">Net</div><div id="hostNet" style="font-weight:600;word-break:break-all;">—</div></div>
+          <div><div class="k">Model</div><div id="hostModel" style="font-weight:600;word-break:break-all;">—</div></div>
         </div>
       </div>
       <div class="bench" style="margin-top:8px">
         <div class="cap"><b>Energi</b> — Watt × jam nyala · estimasi 12V tetap, tanpa sensor</div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:var(--text-sm);">
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Hari ini</div><div id="energyToday" style="font-weight:600;">—</div><div style="color:var(--muted);font-size:var(--text-2xs);margin-top:2px;" id="energyTodaySub">—</div></div>
-          <div><div style="color:var(--muted);font-size:var(--text-2xs);">Bulan ini</div><div id="energyMonth" style="font-weight:600;">—</div><div style="color:var(--muted);font-size:var(--text-2xs);margin-top:2px;" id="energyMonthSub">—</div></div>
+        <div class="kv-grid">
+          <div><div class="k">Hari ini</div><div id="energyToday" style="font-weight:600;">—</div><div style="color:var(--muted);font-size:var(--text-2xs);margin-top:2px;" id="energyTodaySub">—</div></div>
+          <div><div class="k">Bulan ini</div><div id="energyMonth" style="font-weight:600;">—</div><div style="color:var(--muted);font-size:var(--text-2xs);margin-top:2px;" id="energyMonthSub">—</div></div>
         </div>
         <div style="color:var(--muted);font-size:var(--text-2xs);margin-top:8px;">Estimasi: tarif × kWh. 1 kWh = 1000 Wh. Tanpa PZEM — akurat untuk 12V stack.</div>
       </div>
@@ -548,17 +592,17 @@ footer{
       <h2 class="kicker">Otomasi jadwal</h2>
       <div class="lede">Waktu Asia/Jakarta · dieksekusi cron-job.org, bukan STB.</div>
       <div class="bench">
-      <div style="display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:end;">
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Relay
+      <div class="form-grid wide">
+        <label class="field">Relay
           <select id="schedRelay" class="sel"></select>
         </label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Aksi
+        <label class="field">Aksi
           <select id="schedState" class="sel"><option value="on">ON</option><option value="off">OFF</option></select>
         </label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Jam
+        <label class="field">Jam
           <input type="time" id="schedTime" value="06:00" style="min-width:130px;">
         </label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;align-items:center;">Aktif
+        <label class="field center">Aktif
           <label class="switch-wrap"><input type="checkbox" id="schedEnabled" checked class="switch" aria-label="Aktif saat dibuat"></label>
         </label>
       </div>
@@ -606,14 +650,14 @@ footer{
       <div class="lede">Pilih sumber tiap line OLED (8 line: 1-4 page1, 5-8 page2 rotate 8s).</div>
       <div class="bench">
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:8px;" id="oledGrid">
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 1<select id="setLine1" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 2<select id="setLine2" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 3<select id="setLine3" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 4<select id="setLine4" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 5<select id="setLine5" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 6<select id="setLine6" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 7<select id="setLine7" class="sel"></select></label>
-        <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Line 8<select id="setLine8" class="sel"></select></label>
+        <label class="field">Line 1<select id="setLine1" class="sel"></select></label>
+        <label class="field">Line 2<select id="setLine2" class="sel"></select></label>
+        <label class="field">Line 3<select id="setLine3" class="sel"></select></label>
+        <label class="field">Line 4<select id="setLine4" class="sel"></select></label>
+        <label class="field">Line 5<select id="setLine5" class="sel"></select></label>
+        <label class="field">Line 6<select id="setLine6" class="sel"></select></label>
+        <label class="field">Line 7<select id="setLine7" class="sel"></select></label>
+        <label class="field">Line 8<select id="setLine8" class="sel"></select></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
         <label style="font-size:var(--text-xs);color:var(--muted);display:flex;align-items:center;gap:6px;">Polling (detik)<input type="number" id="setPoll" min="2" max="60" value="5" style="width:70px;"></label>
@@ -632,12 +676,14 @@ footer{
       <div class="lede">Tambah relay langsung kepakai di Dashboard & Jadwal — tanpa edit code. ID tanpa spasi, mis: pompa, valve1.</div>
       <div class="bench">
         <div id="relayMgr" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
-        <div style="display:flex;gap:8px;">
-          <label for="newRelayId">ID relay (huruf kecil)</label><input type="text" id="newRelayId" placeholder="id (pompa)" style="flex:1;">
-          <label for="newRelayLabel">Label relay</label><input type="text" id="newRelayLabel" placeholder="Label (Pompa Air)" style="flex:1;">
-          <div style="position:relative">
+        <div class="form-grid">
+          <label class="field" for="newRelayId">ID relay (huruf kecil)
+            <input type="text" id="newRelayId" placeholder="id (pompa)"></label>
+          <label class="field" for="newRelayLabel">Label relay
+            <input type="text" id="newRelayLabel" placeholder="Label (Pompa Air)"></label>
+          <div class="field" style="position:relative">
             <label for="newRelayIcon">Ikon relay</label><input type="hidden" id="newRelayIcon" value="">
-            <button class="sel" id="relayIconBtn" type="button" style="width:70px;min-height:44px;">Icon ▾</button>
+            <button class="sel" id="relayIconBtn" type="button">Icon ▾</button>
             <div class="icon-pick" id="relayIconPick"></div>
           </div>
           <button class="btn" id="addRelayBtn">+ Tambah</button>
@@ -649,13 +695,16 @@ footer{
       <div class="lede">Kirim via POST /api/ingest {"ph":7.1} atau serial JSON {"ph":7.1}.</div>
       <div class="bench">
         <div id="sensorMgr" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <label for="newSensorId">ID sensor</label><input type="text" id="newSensorId" placeholder="id (ph)" style="flex:1;min-width:90px;">
-          <label for="newSensorLabel">Label sensor</label><input type="text" id="newSensorLabel" placeholder="Label (pH Air)" style="flex:1;min-width:120px;">
-          <label for="newSensorUnit">Satuan</label><input type="text" id="newSensorUnit" placeholder="Unit (pH)" style="width:80px;">
-          <div style="position:relative">
+        <div class="form-grid">
+          <label class="field" for="newSensorId">ID sensor
+            <input type="text" id="newSensorId" placeholder="id (ph)"></label>
+          <label class="field" for="newSensorLabel">Label sensor
+            <input type="text" id="newSensorLabel" placeholder="Label (pH Air)"></label>
+          <label class="field" for="newSensorUnit">Satuan
+            <input type="text" id="newSensorUnit" placeholder="Unit (pH)"></label>
+          <div class="field" style="position:relative">
             <label for="newSensorIcon">Ikon sensor</label><input type="hidden" id="newSensorIcon" value="">
-            <button class="sel" id="sensorIconBtn" type="button" style="width:70px;min-height:44px;">Icon ▾</button>
+            <button class="sel" id="sensorIconBtn" type="button">Icon ▾</button>
             <div class="icon-pick" id="sensorIconPick"></div>
           </div>
           <button class="btn" id="addSensorBtn">+ Tambah</button>
@@ -666,10 +715,10 @@ footer{
       <h2 class="kicker">Energi</h2>
       <div class="lede">Watt tiap relay + tarif PLN — untuk estimasi kWh. 12V stack → kWh = watt × jam nyala.</div>
       <div class="bench">
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
-          <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Lampu (W)<input type="number" id="setWattLamp" min="0" max="5000" value="10"></label>
-          <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Kipas (W)<input type="number" id="setWattFan" min="0" max="5000" value="5"></label>
-          <label style="font-size:var(--text-xs);color:var(--muted);display:flex;flex-direction:column;gap:4px;">Tarif (Rp/kWh)<input type="number" id="setTariff" min="0" max="10000" value="1444"></label>
+        <div class="form-grid">
+          <label class="field">Lampu (W)<input type="number" id="setWattLamp" min="0" max="5000" value="10"></label>
+          <label class="field">Kipas (W)<input type="number" id="setWattFan" min="0" max="5000" value="5"></label>
+          <label class="field">Tarif (Rp/kWh)<input type="number" id="setTariff" min="0" max="10000" value="1444"></label>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
           <span style="font-size:var(--text-2xs);color:var(--muted);">Default: 900VA 1.352 · 1.300/2.200VA 1.444 · R2/R3 1.699. Kosong? Ampere = Watt / 12V — misal 10W = 0,83A.</span>
@@ -790,11 +839,11 @@ async function refreshDefs(){
 }
 function buildRelayMgr(){
   const c=$("relayMgr"); if(!c) return;
-  c.innerHTML=_relays.map(r=>`<div style="display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;"><span style="flex:1;font-size:var(--text-xs);">${r.icon||"🔘"} <b>${r.label}</b> <span style="color:var(--muted)">(${r.id})</span></span><button class="btn" style="padding:6px 10px;min-height:32px;" onclick="delRelay('${r.id}')">Hapus</button></div>`).join("") || '<div style="color:var(--muted);font-size:var(--text-xs);">Belum ada relay — default Lampu & Kipas sudah ada.</div>';
+  c.innerHTML=_relays.map(r=>`<div style="display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;"><span style="flex:1;font-size:var(--text-xs);">${r.icon||"🔘"} <b>${r.label}</b> <span style="color:var(--muted)">(${r.id})</span></span><button class="btn danger" onclick="delRelay('${r.id}')">Hapus</button></div>`).join("") || '<div style="color:var(--muted);font-size:var(--text-xs);">Belum ada relay — default Lampu & Kipas sudah ada.</div>';
 }
 function buildSensorMgr(){
   const c=$("sensorMgr"); if(!c) return;
-  c.innerHTML=_sensors.map(s=>`<div style="display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;"><span style="flex:1;font-size:var(--text-xs);">${s.icon||"📟"} <b>${s.label}</b> <span style="color:var(--muted)">(${s.id} · ${s.unit})</span></span><button class="btn" style="padding:6px 10px;min-height:32px;" onclick="delSensor('${s.id}')">Hapus</button></div>`).join("") || '<div style="color:var(--muted);font-size:var(--text-xs);">Belum ada sensor.</div>';
+  c.innerHTML=_sensors.map(s=>`<div style="display:flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;"><span style="flex:1;font-size:var(--text-xs);">${s.icon||"📟"} <b>${s.label}</b> <span style="color:var(--muted)">(${s.id} · ${s.unit})</span></span><button class="btn danger" onclick="delSensor('${s.id}')">Hapus</button></div>`).join("") || '<div style="color:var(--muted);font-size:var(--text-xs);">Belum ada sensor.</div>';
 }
 window.delRelay=async(id)=>{ if(!confirm("Hapus relay "+id+"?")) return; await fetch("/api/relays?id="+encodeURIComponent(id),{method:"DELETE"}); _oledOptsBuilt=false; await refreshDefs(); fetchState(); };
 window.delSensor=async(id)=>{ if(!confirm("Hapus sensor "+id+"?")) return; await fetch("/api/sensors?id="+encodeURIComponent(id),{method:"DELETE"}); _oledOptsBuilt=false; await refreshDefs(); fetchState(); };
@@ -1029,7 +1078,7 @@ async function loadSchedules(){
       const badge=s.state==="on"?"on":"off";
       const hm=String(s.hour).padStart(2,"0")+":"+String(s.minute).padStart(2,"0");
       const hit=s.hit_count||0;
-      return `<tr><td>${t} ${ic}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><label class="switch-wrap"><input type="checkbox" class="switch" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></label></td><td style="text-align:center;font-variant-numeric:tabular-nums;">${hit}</td><td style="display:flex;gap:4px;"><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="editSched(${s.id},'${hm}')" title="Edit jam">✎</button><button class="btn" style="padding:4px 8px;font-size:var(--text-xs);" onclick="deleteSched(${s.id})">✕</button></td></tr>`;
+      return `<tr><td>${t} ${ic}</td><td><span class="badge ${badge}">${st}</span></td><td>${hm}</td><td><label class="switch-wrap"><input type="checkbox" class="switch" ${s.enabled?"checked":""} onchange="toggleSched(${s.id},this.checked)"></label></td><td style="text-align:center;font-variant-numeric:tabular-nums;">${hit}</td><td class="row-actions"><button class="btn icon" onclick="editSched(${s.id},'${hm}')" title="Edit jam" aria-label="Edit jam">✎</button><button class="btn icon danger" onclick="deleteSched(${s.id})" title="Hapus" aria-label="Hapus jadwal">✕</button></td></tr>`;
     }).join("");
   }catch(e){}
   updateCronDomainInfo();
